@@ -1,0 +1,49 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+
+<PageTitle>Ngân Hàng Câu Hỏi Trắc Nghiệm</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
+    Trang chủ
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">Quản lý Khoa</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Thêm, sửa, xóa danh sách khoa</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Href="/danhmuc/khoa" Variant="Variant.Text" Color="Color.Primary">Xem thêm</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudIcon Icon="@Icons.Material.Filled.Book" Color="Color.Secondary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">Quản lý Môn học</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Thêm, sửa, xóa danh sách môn học</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Href="/danhmuc/monhoc" Variant="Variant.Text" Color="Color.Secondary">Xem thêm</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudIcon Icon="@Icons.Material.Filled.Quiz" Color="Color.Tertiary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">Câu hỏi</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Quản lý ngân hàng câu hỏi trắc nghiệm</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Href="/cauhoi" Variant="Variant.Text" Color="Color.Tertiary">Xem thêm</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>

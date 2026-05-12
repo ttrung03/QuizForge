@@ -1,0 +1,32 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using MudBlazor
+<MudNavMenu>
+
+    <MudNavLink Href="/"
+                Match="NavLinkMatch.All"
+                Icon="@Icons.Material.Filled.Home">
+        Trang chủ
+    </MudNavLink>
+
+    <MudDivider Class="my-2" />
+
+    <MudNavGroup Title="Danh mục"
+                 Icon="@Icons.Material.Filled.Category"
+                 Expanded="true">
+        <MudNavLink Href="/danhmuc/khoa"   Icon="@Icons.Material.Filled.School">Quản lý Khoa</MudNavLink>
+        <MudNavLink Href="/danhmuc/monhoc" Icon="@Icons.Material.Filled.Book">Quản lý Môn học</MudNavLink>
+        <MudNavLink Href="/danhmuc/phan"   Icon="@Icons.Material.Filled.AccountTree">Quản lý Phần/Chương</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Câu hỏi"
+                 Icon="@Icons.Material.Filled.Quiz"
+                 Expanded="true">
+        <MudNavLink Href="/cauhoi" Icon="@Icons.Material.Filled.HelpOutline">Danh sách Câu hỏi</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Đề thi"
+                 Icon="@Icons.Material.Filled.Assignment">
+        <MudNavLink Href="/dethi" Icon="@Icons.Material.Filled.Description">Quản lý Đề thi</MudNavLink>
+    </MudNavGroup>
+
+</MudNavMenu>

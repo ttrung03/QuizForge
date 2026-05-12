@@ -1,0 +1,101 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject KhoaService KhoaService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(ExistingKhoa == null ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)"
+                     Class="mr-2" />
+            @(ExistingKhoa == null ? "Thêm Khoa mới" : "Chỉnh sửa Khoa")
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudTextField @bind-Value="_model.TenKhoa"
+                          Label="Tên Khoa"
+                          Placeholder="Ví dụ: Khoa Công nghệ Thông tin"
+                          Required="true"
+                          RequiredError="Vui lòng nhập tên khoa"
+                          MaxLength="250"
+                          Counter="250"
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Class="mt-2" />
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Hủy</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="!_isValid || _saving"
+                   OnClick="Submit">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Đang lưu...</span>
+            }
+            else
+            {
+                <span>Lưu</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // ── Injected từ Blazor Cascading Parameter ───────────────────────────────
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>
+    /// null  → đang thêm mới
+    /// có giá trị → đang chỉnh sửa, form sẽ điền sẵn dữ liệu cũ
+    /// </summary>
+    [Parameter] public KhoaDto? ExistingKhoa { get; set; }
+
+    MudForm _form     = default!;
+    bool    _isValid  = false;
+    bool    _saving   = false;
+
+    // Model gắn với form — SaveKhoaDto hỗ trợ cả thêm lẫn sửa
+    SaveKhoaDto _model = new();
+
+    // ── Khi dialog mở: nếu là Sửa thì điền sẵn dữ liệu cũ ─────────────────
+    protected override void OnInitialized()
+    {
+        if (ExistingKhoa != null)
+        {
+            _model.MaKhoa  = ExistingKhoa.MaKhoa;
+            _model.TenKhoa = ExistingKhoa.TenKhoa;
+        }
+    }
+
+    // ── Lưu ─────────────────────────────────────────────────────────────────
+    async Task Submit()
+    {
+        await _form.ValidateAsync();
+        if (!_isValid) return;
+
+        _saving = true;
+        try
+        {
+            await KhoaService.SaveAsync(_model);
+            Snackbar.Add("Lưu thành công!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    void Cancel() => MudDialog.Cancel();
+}

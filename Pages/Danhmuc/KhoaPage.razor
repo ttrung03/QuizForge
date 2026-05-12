@@ -1,0 +1,119 @@
+@page "/danhmuc/khoa"
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using QuestionBank.Web.Components.Shared
+@inject KhoaService KhoaService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Quản lý Khoa</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.School" Class="mr-2" />
+    Quản lý Khoa
+</MudText>
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+<MudToolBar Dense="true" Class="mb-3">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenAddDialog">
+        Thêm Khoa
+    </MudButton>
+    <MudSpacer />
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+        Tổng: @_khoaList.Count khoa
+    </MudText>
+</MudToolBar>
+
+<!-- ── Bảng dữ liệu ─────────────────────────────────────────────────────── -->
+<MudDataGrid T="KhoaDto"
+             Items="_khoaList"
+             Filterable="true"
+             FilterMode="DataGridFilterMode.ColumnFilterRow"
+             SortMode="SortMode.Multiple"
+             Bordered="true"
+             Striped="true"
+             Hover="true"
+             Loading="_loading"
+             LoadingProgressColor="Color.Primary">
+    <Columns>
+        <PropertyColumn Property="x => x.TenKhoa" Title="Tên Khoa" Sortable="true" Filterable="true" />
+        <TemplateColumn Title="Thao tác" CellStyle="width:130px; text-align:center" Sortable="false" Filterable="false">
+            <CellTemplate>
+                <MudTooltip Text="Chỉnh sửa">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="() => OpenEditDialog(context.Item)" />
+                </MudTooltip>
+                <MudTooltip Text="Xóa">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="() => DeleteKhoa(context.Item)" />
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Class="mud-text-secondary">Chưa có khoa nào. Nhấn "Thêm Khoa" để bắt đầu.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    List<KhoaDto> _khoaList = new();
+    bool _loading = true;
+
+    // ── Khởi tạo trang ──────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        _loading = true;
+        _khoaList = await KhoaService.GetAllAsync();
+        _loading = false;
+    }
+
+    // ── Mở dialog Thêm ──────────────────────────────────────────────────────
+    async Task OpenAddDialog()
+    {
+        var dialog = await DialogService.ShowAsync<KhoaDialog>("Thêm Khoa");
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    // ── Mở dialog Sửa ───────────────────────────────────────────────────────
+    async Task OpenEditDialog(KhoaDto khoa)
+    {
+        var parameters = new DialogParameters<KhoaDialog>
+        {
+            { x => x.ExistingKhoa, khoa }
+        };
+        var dialog = await DialogService.ShowAsync<KhoaDialog>("Sửa Khoa", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    // ── Xóa với xác nhận ────────────────────────────────────────────────────
+    async Task DeleteKhoa(KhoaDto khoa)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            title: "Xác nhận xóa",
+            message: $"Bạn có chắc muốn xóa khoa \"{khoa.TenKhoa}\"?",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (confirmed == true)
+        {
+            await KhoaService.DeleteAsync(khoa.MaKhoa);
+            Snackbar.Add("Đã xóa khoa thành công", Severity.Success);
+            await LoadData();
+        }
+    }
+} 
