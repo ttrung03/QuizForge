@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
     @using Microsoft.AspNetCore.Components.Web
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
     @using QuestionBank.Web.Components
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>
