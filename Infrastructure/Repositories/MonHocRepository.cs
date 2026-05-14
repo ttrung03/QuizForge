@@ -31,6 +31,18 @@ public class MonHocRepository : IMonHocRepository
 
     public async Task AddAsync(MonHoc monHoc)
     {
+        // Kiểm tra mã số môn học đã tồn tại trong cùng khoa chưa
+        bool existMonHoc = await _context.MonHocs.AnyAsync(m =>
+            m.MaKhoa == monHoc.MaKhoa &&
+            m.MaSoMonHoc == monHoc.MaSoMonHoc &&
+            m.XoaTamMonHoc != true);
+
+        if (existMonHoc)
+        {
+            throw new InvalidOperationException(
+                $"Mã số môn học '{monHoc.MaSoMonHoc}' đã tồn tại trong khoa này.");
+        }
+
         monHoc.MaMonHoc = Guid.NewGuid();
         _context.MonHocs.Add(monHoc);
         await _context.SaveChangesAsync();
@@ -38,6 +50,19 @@ public class MonHocRepository : IMonHocRepository
 
     public async Task UpdateAsync(MonHoc monHoc)
     {
+        // Kiểm tra mã số môn học trùng trong cùng khoa (loại trừ chính bản ghi đang sửa)
+        bool existMonHoc = await _context.MonHocs.AnyAsync(m =>
+            m.MaKhoa == monHoc.MaKhoa &&
+            m.MaSoMonHoc == monHoc.MaSoMonHoc &&
+            m.MaMonHoc != monHoc.MaMonHoc &&
+            m.XoaTamMonHoc != true);
+
+        if (existMonHoc)
+        {
+            throw new InvalidOperationException(
+                $"Mã số môn học '{monHoc.MaSoMonHoc}' đã tồn tại trong khoa này.");
+        }
+
         _context.MonHocs.Update(monHoc);
         await _context.SaveChangesAsync();
     }

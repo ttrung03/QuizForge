@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using QuestionBank.Web.Application.Interfaces;
 using QuestionBank.Web.Domain.Entities;
 using QuestionBank.Web.Infrastructure.Data;
@@ -31,13 +31,36 @@ public class KhoaRepository : IKhoaRepository
 
     public async Task AddAsync(Khoa khoa)
     {
-        khoa.MaKhoa = Guid.NewGuid(); // tạo GUID mới cho bản ghi
+        // Kiểm tra tên khoa đã tồn tại trong hệ thống chưa
+        bool existed = await _context.Khoas.AnyAsync(k =>
+            k.TenKhoa == khoa.TenKhoa &&
+            k.XoaTamKhoa != true);
+
+        if (existed)
+        {
+            throw new InvalidOperationException(
+                $"Tên khoa '{khoa.TenKhoa}' đã tồn tại.");
+        }
+
+        khoa.MaKhoa = Guid.NewGuid();
         _context.Khoas.Add(khoa);
         await _context.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(Khoa khoa)
     {
+        // Kiểm tra tên khoa trùng (loại trừ chính bản ghi đang sửa)
+        bool existed = await _context.Khoas.AnyAsync(k =>
+            k.TenKhoa == khoa.TenKhoa &&
+            k.MaKhoa != khoa.MaKhoa &&
+            k.XoaTamKhoa != true);
+
+        if (existed)
+        {
+            throw new InvalidOperationException(
+                $"Tên khoa '{khoa.TenKhoa}' đã tồn tại.");
+        }
+
         _context.Khoas.Update(khoa);
         await _context.SaveChangesAsync();
     }
