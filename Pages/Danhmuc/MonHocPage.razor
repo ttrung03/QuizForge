@@ -1,0 +1,117 @@
+@page "/danhmuc/monhoc"
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using QuestionBank.Web.Components.Shared
+@inject MonHocService MonHocService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Quản lý Môn học</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Book" Class="mr-2" />
+    Quản lý Môn học
+</MudText>
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+<MudToolBar Dense="true" Class="mb-3">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenAddDialog">
+        Thêm Môn học
+    </MudButton>
+    <MudSpacer />
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+        Tổng: @_monHocList.Count môn học
+    </MudText>
+</MudToolBar>
+
+<!-- ── Bảng dữ liệu ─────────────────────────────────────────────────────── -->
+<MudDataGrid T="MonHocDto"
+             Items="_monHocList"
+             Filterable="true"
+             FilterMode="DataGridFilterMode.ColumnFilterRow"
+             SortMode="SortMode.Multiple"
+             Bordered="true"
+             Striped="true"
+             Hover="true"
+             Loading="_loading"
+             LoadingProgressColor="Color.Primary">
+    <Columns>
+        <PropertyColumn Property="x => x.MaSoMonHoc" Title="Mã số" Sortable="true" Filterable="true" />
+        <PropertyColumn Property="x => x.TenMonHoc"  Title="Tên Môn học" Sortable="true" Filterable="true" />
+        <PropertyColumn Property="x => x.TenKhoa"    Title="Khoa" Sortable="true" Filterable="true" />
+        <TemplateColumn Title="Thao tác" CellStyle="width:130px; text-align:center" Sortable="false" Filterable="false">
+            <CellTemplate>
+                <MudTooltip Text="Chỉnh sửa">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="() => OpenEditDialog(context.Item)" />
+                </MudTooltip>
+                <MudTooltip Text="Xóa">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="() => DeleteMonHoc(context.Item)" />
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Class="mud-text-secondary">Chưa có môn học nào. Nhấn "Thêm Môn học" để bắt đầu.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    List<MonHocDto> _monHocList = new();
+    bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        _loading = true;
+        _monHocList = await MonHocService.GetAllAsync();
+        _loading = false;
+    }
+
+    async Task OpenAddDialog()
+    {
+        var dialog = await DialogService.ShowAsync<MonHocDialog>("Thêm Môn học");
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    async Task OpenEditDialog(MonHocDto monHoc)
+    {
+        var parameters = new DialogParameters<MonHocDialog>
+        {
+            { x => x.ExistingMonHoc, monHoc }
+        };
+        var dialog = await DialogService.ShowAsync<MonHocDialog>("Sửa Môn học", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    async Task DeleteMonHoc(MonHocDto monHoc)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            title: "Xác nhận xóa",
+            message: $"Bạn có chắc muốn xóa môn học \"{monHoc.TenMonHoc}\"?",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (confirmed == true)
+        {
+            await MonHocService.DeleteAsync(monHoc.MaMonHoc);
+            Snackbar.Add("Đã xóa môn học thành công", Severity.Success);
+            await LoadData();
+        }
+    }
+}

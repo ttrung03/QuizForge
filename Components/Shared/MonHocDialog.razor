@@ -1,0 +1,126 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject MonHocService MonHocService
+@inject KhoaService KhoaService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(ExistingMonHoc == null ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)"
+                     Class="mr-2" />
+            @(ExistingMonHoc == null ? "Thêm Môn học mới" : "Chỉnh sửa Môn học")
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudSelect @bind-Value="_model.MaKhoa"
+                       Label="Khoa"
+                       Required="true"
+                       RequiredError="Vui lòng chọn khoa"
+                       Variant="Variant.Outlined"
+                       Class="mt-2">
+                @foreach (var khoa in _khoaList)
+                {
+                    <MudSelectItem Value="@khoa.MaKhoa">@khoa.TenKhoa</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField @bind-Value="_model.MaSoMonHoc"
+                          Label="Mã số Môn học"
+                          Placeholder="Ví dụ: IT001"
+                          Required="true"
+                          RequiredError="Vui lòng nhập mã số môn học"
+                          MaxLength="50"
+                          Counter="50"
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Class="mt-3" />
+
+            <MudTextField @bind-Value="_model.TenMonHoc"
+                          Label="Tên Môn học"
+                          Placeholder="Ví dụ: Lập trình hướng đối tượng"
+                          Required="true"
+                          RequiredError="Vui lòng nhập tên môn học"
+                          MaxLength="250"
+                          Counter="250"
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Class="mt-3" />
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Hủy</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="_saving"
+                   OnClick="Submit">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Đang lưu...</span>
+            }
+            else
+            {
+                <span>Lưu</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>
+    /// null  → đang thêm mới
+    /// có giá trị → đang chỉnh sửa, form sẽ điền sẵn dữ liệu cũ
+    /// </summary>
+    [Parameter] public MonHocDto? ExistingMonHoc { get; set; }
+
+    MudForm _form    = default!;
+    bool    _isValid = false;
+    bool    _saving  = false;
+
+    List<KhoaDto> _khoaList = new();
+    SaveMonHocDto _model    = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _khoaList = await KhoaService.GetAllAsync();
+
+        if (ExistingMonHoc != null)
+        {
+            _model.MaMonHoc   = ExistingMonHoc.MaMonHoc;
+            _model.MaKhoa     = ExistingMonHoc.MaKhoa;
+            _model.MaSoMonHoc = ExistingMonHoc.MaSoMonHoc;
+            _model.TenMonHoc  = ExistingMonHoc.TenMonHoc;
+        }
+    }
+
+    async Task Submit()
+    {
+        await _form.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _saving = true;
+        try
+        {
+            await MonHocService.SaveAsync(_model);
+            Snackbar.Add("Lưu thành công!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    void Cancel() => MudDialog.Cancel();
+}
