@@ -26,22 +26,57 @@ public class MonHocRepository : IMonHocRepository
                .OrderBy(m => m.TenMonHoc)
                .ToListAsync();
 
+    /// <summary>Lấy môn học trực tiếp thuộc khoa (MaKhoa = maKhoa).</summary>
+    public async Task<List<MonHoc>> GetAllByKhoaAsync(Guid maKhoa)
+        => await _context.MonHocs
+               .Include(m => m.Khoa)
+               .Where(m => m.MaKhoa == maKhoa && m.XoaTamMonHoc != true)
+               .OrderBy(m => m.TenMonHoc)
+               .ToListAsync();
+
+    /// <summary>Lấy môn học được dùng chung cho khoa này (trong bảng MonHoc_KhoaChung).</summary>
+    public async Task<List<MonHoc>> GetSharedByKhoaAsync(Guid maKhoa)
+        => await _context.MonHocKhoaChungs
+               .Where(mkc => mkc.MaKhoa == maKhoa)
+               .Select(mkc => mkc.MonHoc)
+               .Where(m => m.XoaTamMonHoc != true)
+               .OrderBy(m => m.TenMonHoc)
+               .ToListAsync();
+
+    /// <summary>
+    /// Lấy môn học chưa có mặt trong khoa này (chưa trực tiếp và chưa dùng chung).
+    /// Dùng cho dialog "Thêm môn học có sẵn".
+    /// </summary>
+    public async Task<List<MonHoc>> GetAvailableForKhoaAsync(Guid maKhoa)
+    {
+        // IDs đã có trong khoa qua bảng chung
+        var sharedIds = await _context.MonHocKhoaChungs
+            .Where(mkc => mkc.MaKhoa == maKhoa)
+            .Select(mkc => mkc.MaMonHoc)
+            .ToListAsync();
+
+        return await _context.MonHocs
+            .Include(m => m.Khoa)
+            .Where(m => m.XoaTamMonHoc != true
+                     && m.MaKhoa != maKhoa           // chưa trực tiếp thuộc khoa này
+                     && !sharedIds.Contains(m.MaMonHoc)) // chưa được share cho khoa này
+            .OrderBy(m => m.TenMonHoc)
+            .ToListAsync();
+    }
+
     public async Task<MonHoc?> GetByIdAsync(Guid id)
         => await _context.MonHocs.FindAsync(id);
 
     public async Task AddAsync(MonHoc monHoc)
     {
-        // Kiểm tra mã số môn học đã tồn tại trong cùng khoa chưa
-        bool existMonHoc = await _context.MonHocs.AnyAsync(m =>
-            m.MaKhoa == monHoc.MaKhoa &&
+        // Kiểm tra trùng mã toàn cục
+        var exists = await _context.MonHocs.AnyAsync(m =>
             m.MaSoMonHoc == monHoc.MaSoMonHoc &&
             m.XoaTamMonHoc != true);
 
-        if (existMonHoc)
-        {
+        if (exists)
             throw new InvalidOperationException(
-                $"Mã số môn học '{monHoc.MaSoMonHoc}' đã tồn tại trong khoa này.");
-        }
+                $"Mã số môn học '{monHoc.MaSoMonHoc}' đã tồn tại.");
 
         monHoc.MaMonHoc = Guid.NewGuid();
         _context.MonHocs.Add(monHoc);
@@ -50,20 +85,60 @@ public class MonHocRepository : IMonHocRepository
 
     public async Task UpdateAsync(MonHoc monHoc)
     {
-        // Kiểm tra mã số môn học trùng trong cùng khoa (loại trừ chính bản ghi đang sửa)
-        bool existMonHoc = await _context.MonHocs.AnyAsync(m =>
-            m.MaKhoa == monHoc.MaKhoa &&
+        // Kiểm tra trùng mã toàn cục (loại trừ chính bản ghi đang sửa)
+        var exists = await _context.MonHocs.AnyAsync(m =>
             m.MaSoMonHoc == monHoc.MaSoMonHoc &&
             m.MaMonHoc != monHoc.MaMonHoc &&
             m.XoaTamMonHoc != true);
 
-        if (existMonHoc)
-        {
+        if (exists)
             throw new InvalidOperationException(
-                $"Mã số môn học '{monHoc.MaSoMonHoc}' đã tồn tại trong khoa này.");
-        }
+                $"Mã số môn học '{monHoc.MaSoMonHoc}' đã tồn tại.");
 
         _context.MonHocs.Update(monHoc);
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>Gán Môn học trực tiếp vào một Khoa (set MaKhoa).</summary>
+    public async Task AssignToKhoaAsync(Guid maMonHoc, Guid maKhoa)
+    {
+        var monHoc = await _context.MonHocs.FindAsync(maMonHoc)
+                     ?? throw new InvalidOperationException("Không tìm thấy môn học.");
+        monHoc.MaKhoa = maKhoa;
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>Thêm bản ghi vào MonHoc_KhoaChung (dùng chung).</summary>
+    public async Task AddSharedAsync(Guid maMonHoc, Guid maKhoa)
+    {
+        var alreadyExists = await _context.MonHocKhoaChungs
+            .AnyAsync(mkc => mkc.MaMonHoc == maMonHoc && mkc.MaKhoa == maKhoa);
+        if (alreadyExists) return;
+
+        _context.MonHocKhoaChungs.Add(new MonHocKhoaChung
+        {
+            MaMonHoc = maMonHoc,
+            MaKhoa   = maKhoa
+        });
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<Guid?> GetFirstSharedKhoaAsync(Guid maMonHoc)
+    {
+        var record = await _context.MonHocKhoaChungs
+            .Where(mkc => mkc.MaMonHoc == maMonHoc)
+            .FirstOrDefaultAsync();
+        return record?.MaKhoa;
+    }
+
+    /// <summary>Xóa bản ghi khỏi MonHoc_KhoaChung (gỡ dùng chung).</summary>
+    public async Task RemoveSharedAsync(Guid maMonHoc, Guid maKhoa)
+    {
+        var record = await _context.MonHocKhoaChungs
+            .FirstOrDefaultAsync(mkc => mkc.MaMonHoc == maMonHoc && mkc.MaKhoa == maKhoa);
+        if (record is null) return;
+
+        _context.MonHocKhoaChungs.Remove(record);
         await _context.SaveChangesAsync();
     }
 

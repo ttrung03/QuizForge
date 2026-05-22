@@ -15,6 +15,7 @@ public class QuestionBankDbContext : DbContext
     // ── DbSet — mỗi property tương ứng 1 bảng ────────────────────────────────
     public DbSet<Khoa> Khoas { get; set; }
     public DbSet<MonHoc> MonHocs { get; set; }
+    public DbSet<MonHocKhoaChung> MonHocKhoaChungs { get; set; }
     public DbSet<Phan> Phans { get; set; }
     public DbSet<CauHoi> CauHois { get; set; }
     public DbSet<CauTraLoi> CauTraLois { get; set; }
@@ -47,9 +48,29 @@ public class QuestionBankDbContext : DbContext
             entity.Property(e => e.MaSoMonHoc).IsRequired().HasMaxLength(50);
             entity.Property(e => e.TenMonHoc).IsRequired().HasMaxLength(250);
 
-            // FK: MonHoc → Khoa (ON UPDATE CASCADE)
+            // FK: MonHoc → Khoa (nullable, SET NULL khi xóa Khoa)
             entity.HasOne(e => e.Khoa)
                   .WithMany(k => k.MonHocs)
+                  .HasForeignKey(e => e.MaKhoa)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ════════════════════════════════════════════════════════════════════
+        // MONHOC_KHOACHUNG — môn học dùng chung nhiều khoa
+        // ════════════════════════════════════════════════════════════════════
+        modelBuilder.Entity<MonHocKhoaChung>(entity =>
+        {
+            entity.HasKey(e => new { e.MaMonHoc, e.MaKhoa });
+            entity.ToTable("MonHoc_KhoaChung");
+
+            entity.HasOne(e => e.MonHoc)
+                  .WithMany()
+                  .HasForeignKey(e => e.MaMonHoc)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Khoa)
+                  .WithMany()
                   .HasForeignKey(e => e.MaKhoa)
                   .OnDelete(DeleteBehavior.Cascade);
         });

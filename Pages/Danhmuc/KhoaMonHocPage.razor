@@ -1,0 +1,341 @@
+@page "/danhmuc/khoa-monhoc"
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using QuestionBank.Web.Components.Shared
+@inject KhoaService KhoaService
+@inject MonHocService MonHocService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Khoa &amp; Môn học</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Class="mr-2" />
+    Quản lý Khoa &amp; Môn học
+</MudText>
+
+<MudGrid>
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  CỘT TRÁI — DANH SÁCH KHOA                                           -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <MudItem xs="12" md="5">
+        <MudPaper Elevation="2" Class="pa-3" Style="height:100%">
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.School" Class="mr-1" Style="vertical-align:middle" />
+                Danh sách Khoa
+            </MudText>
+
+            <MudToolBar Dense="true" Class="mb-2 px-0">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenAddKhoaDialog">
+                    Thêm Khoa
+                </MudButton>
+                <MudSpacer />
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Tổng: @_khoaList.Count khoa
+                </MudText>
+            </MudToolBar>
+
+            <MudDataGrid T="KhoaDto"
+                         Items="_khoaList"
+                         Filterable="true"
+                         FilterMode="DataGridFilterMode.ColumnFilterRow"
+                         SortMode="SortMode.Multiple"
+                         Bordered="true"
+                         Striped="true"
+                         Hover="true"
+                         Loading="_khoaLoading"
+                         LoadingProgressColor="Color.Primary"
+                         RowClick="OnKhoaRowClick"
+                         RowClassFunc="@((row, _) => row.MaKhoa == _selectedKhoa?.MaKhoa ? "selected-row" : "")">
+                <Columns>
+                    <PropertyColumn Property="x => x.TenKhoa" Title="Tên Khoa" Sortable="true" Filterable="true" />
+                    <TemplateColumn Title="Thao tác" CellStyle="width:100px; text-align:center" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudTooltip Text="Chỉnh sửa">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               OnClick="@(() => OpenEditKhoaDialog(context.Item))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Xóa">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               OnClick="@(() => DeleteKhoa(context.Item))" />
+                            </MudTooltip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <NoRecordsContent>
+                    <MudText Class="mud-text-secondary">Chưa có khoa nào. Nhấn "Thêm Khoa" để bắt đầu.</MudText>
+                </NoRecordsContent>
+            </MudDataGrid>
+        </MudPaper>
+    </MudItem>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  CỘT PHẢI — DANH SÁCH MÔN HỌC THEO KHOA ĐÃ CHỌN                    -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <MudItem xs="12" md="7">
+        <MudPaper Elevation="2" Class="pa-3" Style="height:100%">
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Class="mr-1" Style="vertical-align:middle" />
+                @if (_selectedKhoa == null)
+                {
+                    <span>Môn học</span>
+                }
+                else
+                {
+                    <span>Môn học — <strong>@_selectedKhoa.TenKhoa</strong></span>
+                }
+            </MudText>
+
+            <MudToolBar Dense="true" Class="mb-2 px-0">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Disabled="@(_selectedKhoa == null)"
+                           OnClick="OpenAddMonHocDialog">
+                    Thêm Môn học
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Tertiary"
+                           StartIcon="@Icons.Material.Filled.PlaylistAdd"
+                           Disabled="@(_selectedKhoa == null)"
+                           Class="ml-2"
+                           OnClick="OpenAssignMonHocDialog">
+                    Thêm môn học có sẵn
+                </MudButton>
+                <MudSpacer />
+                @if (_selectedKhoa != null)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        Tổng: @_monHocList.Count môn học
+                    </MudText>
+                }
+            </MudToolBar>
+
+            @if (_selectedKhoa == null)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-2">
+                    Nhấn vào một hàng trong bảng <strong>Khoa</strong> để xem và quản lý Môn học thuộc khoa đó.
+                </MudAlert>
+            }
+            else
+            {
+                <MudDataGrid T="MonHocDto"
+                             Items="_monHocList"
+                             Filterable="true"
+                             FilterMode="DataGridFilterMode.ColumnFilterRow"
+                             SortMode="SortMode.Multiple"
+                             Bordered="true"
+                             Striped="true"
+                             Hover="true"
+                             Loading="_monHocLoading"
+                             LoadingProgressColor="Color.Secondary">
+                    <Columns>
+                        <PropertyColumn Property="x => x.MaSoMonHoc" Title="Mã số"    Sortable="true" Filterable="true" />
+                        <TemplateColumn Title="Tên Môn học" Sortable="false" Filterable="false">
+                            <CellTemplate>
+                                @context.Item.TenMonHoc
+                                @if (context.Item.LaMonChung)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                             Class="ml-2" Style="height:18px;font-size:11px">
+                                        Dùng chung
+                                    </MudChip>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Thao tác" CellStyle="width:110px; text-align:center" Sortable="false" Filterable="false">
+                            <CellTemplate>
+                                @if (!context.Item.LaMonChung)
+                                {
+                                    <MudTooltip Text="Chỉnh sửa">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => OpenEditMonHocDialog(context.Item))" />
+                                    </MudTooltip>
+                                }
+                                <MudTooltip Text="@(context.Item.LaMonChung ? "Gỡ dùng chung" : "Xóa")">
+                                    <MudIconButton Icon="@(context.Item.LaMonChung ? Icons.Material.Filled.LinkOff : Icons.Material.Filled.Delete)"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => DeleteMonHoc(context.Item))" />
+                                </MudTooltip>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <NoRecordsContent>
+                        <MudText Class="mud-text-secondary">Khoa này chưa có môn học nào. Nhấn "Thêm Môn học" để bắt đầu.</MudText>
+                    </NoRecordsContent>
+                </MudDataGrid>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .selected-row td {
+        background-color: var(--mud-palette-primary-lighten) !important;
+        font-weight: 600;
+    }
+</style>
+
+@code {
+    List<KhoaDto>   _khoaList    = new();
+    List<MonHocDto> _monHocList  = new();
+    KhoaDto?        _selectedKhoa = null;
+    bool            _khoaLoading   = true;
+    bool            _monHocLoading = false;
+
+    // ── Khởi tạo ────────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadKhoaData();
+    }
+
+    async Task LoadKhoaData()
+    {
+        _khoaLoading = true;
+        _khoaList = await KhoaService.GetAllAsync();
+
+        // Nếu khoa đang chọn bị xóa → bỏ chọn
+        if (_selectedKhoa != null && !_khoaList.Any(k => k.MaKhoa == _selectedKhoa.MaKhoa))
+        {
+            _selectedKhoa = null;
+            _monHocList.Clear();
+        }
+
+        _khoaLoading = false;
+    }
+
+    async Task LoadMonHocData()
+    {
+        if (_selectedKhoa == null) return;
+        _monHocLoading = true;
+        _monHocList = await MonHocService.GetAllByKhoaAsync(_selectedKhoa.MaKhoa);
+        _monHocLoading = false;
+    }
+
+    // ── Chọn hàng Khoa ──────────────────────────────────────────────────────
+    async Task OnKhoaRowClick(DataGridRowClickEventArgs<KhoaDto> args)
+    {
+        _selectedKhoa = args.Item;
+        await LoadMonHocData();
+    }
+
+    // ── CRUD Khoa ───────────────────────────────────────────────────────────
+    async Task OpenAddKhoaDialog()
+    {
+        var dialog = await DialogService.ShowAsync<KhoaDialog>("Thêm Khoa");
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadKhoaData();
+    }
+
+    async Task OpenEditKhoaDialog(KhoaDto khoa)
+    {
+        var parameters = new DialogParameters<KhoaDialog>
+        {
+            { x => x.ExistingKhoa, khoa }
+        };
+        var dialog = await DialogService.ShowAsync<KhoaDialog>("Sửa Khoa", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadKhoaData();
+    }
+
+    async Task DeleteKhoa(KhoaDto khoa)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            title: "Xác nhận xóa",
+            message: $"Bạn có chắc muốn xóa khoa \"{khoa.TenKhoa}\"?",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (confirmed == true)
+        {
+            await KhoaService.DeleteAsync(khoa.MaKhoa);
+            Snackbar.Add("Đã xóa khoa thành công", Severity.Success);
+            await LoadKhoaData();
+        }
+    }
+
+    // ── CRUD Môn học ────────────────────────────────────────────────────────
+    async Task OpenAssignMonHocDialog()
+    {
+        if (_selectedKhoa == null) return;
+
+        var parameters = new DialogParameters<AssignMonHocDialog>
+        {
+            { x => x.MaKhoa,  _selectedKhoa.MaKhoa  },
+            { x => x.TenKhoa, _selectedKhoa.TenKhoa }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog  = await DialogService.ShowAsync<AssignMonHocDialog>("Thêm môn học có sẵn", parameters, options);
+        var result  = await dialog.Result;
+        if (!result!.Canceled) await LoadMonHocData();
+    }
+
+    async Task OpenAddMonHocDialog()
+    {
+        if (_selectedKhoa == null) return;
+
+        var parameters = new DialogParameters<MonHocDialog>
+        {
+            { x => x.MaKhoa, _selectedKhoa.MaKhoa }
+        };
+        var dialog = await DialogService.ShowAsync<MonHocDialog>("Thêm Môn học", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadMonHocData();
+    }
+
+    async Task OpenEditMonHocDialog(MonHocDto monHoc)
+    {
+        var parameters = new DialogParameters<MonHocDialog>
+        {
+            { x => x.ExistingMonHoc, monHoc }
+        };
+        var dialog = await DialogService.ShowAsync<MonHocDialog>("Sửa Môn học", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadMonHocData();
+    }
+
+    async Task DeleteMonHoc(MonHocDto monHoc)
+    {
+        if (monHoc.LaMonChung)
+        {
+            // Môn dùng chung → chỉ gỡ liên kết, không xóa môn học gốc
+            bool? confirmed = await DialogService.ShowMessageBoxAsync(
+                title: "Gỡ dùng chung",
+                message: $"Gỡ môn học \"{monHoc.TenMonHoc}\" khỏi khoa này? Môn học gốc vẫn còn ở khoa sở hữu.",
+                yesText: "Gỡ", cancelText: "Hủy");
+
+            if (confirmed == true)
+            {
+                await MonHocService.RemoveSharedAsync(monHoc.MaMonHoc, _selectedKhoa!.MaKhoa);
+                Snackbar.Add("Đã gỡ môn học dùng chung", Severity.Success);
+                await LoadMonHocData();
+            }
+        }
+        else
+        {
+            // Môn trực tiếp → xóa mềm
+            bool? confirmed = await DialogService.ShowMessageBoxAsync(
+                title: "Xác nhận xóa",
+                message: $"Bạn có chắc muốn xóa môn học \"{monHoc.TenMonHoc}\"?",
+                yesText: "Xóa", cancelText: "Hủy");
+
+            if (confirmed == true)
+            {
+                await MonHocService.DeleteAsync(monHoc.MaMonHoc);
+                Snackbar.Add("Đã xóa môn học thành công", Severity.Success);
+                await LoadMonHocData();
+            }
+        }
+    }
+}

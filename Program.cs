@@ -23,10 +23,12 @@ builder.Services.AddDbContext<QuestionBankDbContext>(options =>
 // ── Repositories ──────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IKhoaRepository, KhoaRepository>();
 builder.Services.AddScoped<IMonHocRepository, MonHocRepository>();
+builder.Services.AddScoped<IPhanRepository, PhanRepository>();
 
 // ── Application Services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<KhoaService>();
 builder.Services.AddScoped<MonHocService>();
+builder.Services.AddScoped<PhanService>();
 
 var app = builder.Build();
 
