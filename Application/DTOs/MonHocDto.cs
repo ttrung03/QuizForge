@@ -6,10 +6,16 @@ namespace QuestionBank.Web.Application.DTOs;
 public class MonHocDto
 {
     public Guid MaMonHoc { get; set; }
-    public Guid MaKhoa { get; set; }
-    public string TenKhoa { get; set; } = string.Empty;
+    public Guid? MaKhoa { get; set; }
+    public string? TenKhoa { get; set; }
     public string MaSoMonHoc { get; set; } = string.Empty;
     public string TenMonHoc { get; set; } = string.Empty;
+
+    /// <summary>
+    /// true  → môn học được dùng chung (từ bảng MonHoc_KhoaChung), không thuộc trực tiếp khoa này.
+    /// false → môn học thuộc trực tiếp khoa này (MaKhoa trong bảng MonHoc).
+    /// </summary>
+    public bool LaMonChung { get; set; }
 }
 
 /// <summary>
@@ -20,7 +26,7 @@ public class MonHocDto
 public class SaveMonHocDto
 {
     public Guid? MaMonHoc { get; set; }
-    public Guid MaKhoa { get; set; }
+    public Guid? MaKhoa { get; set; }
     public string MaSoMonHoc { get; set; } = string.Empty;
     public string TenMonHoc { get; set; } = string.Empty;
 }

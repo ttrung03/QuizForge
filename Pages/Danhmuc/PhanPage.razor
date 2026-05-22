@@ -1,0 +1,151 @@
+@page "/danhmuc/phan"
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using QuestionBank.Web.Components.Shared
+@inject PhanService PhanService
+@inject MonHocService MonHocService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Quản lý Phần</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.ListAlt" Class="mr-2" />
+    Quản lý Phần
+</MudText>
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+<MudToolBar Dense="true" Class="mb-3">
+    <MudSelect T="Guid"
+               Value="_selectedMonHocId"
+               Label="Lọc theo Môn học"
+               Variant="Variant.Outlined"
+               Dense="true"
+               ValueChanged="OnMonHocChanged"
+               Style="min-width:250px">
+        <MudSelectItem Value="@Guid.Empty">Tất cả</MudSelectItem>
+        @foreach (var monHoc in _monHocList)
+        {
+            <MudSelectItem Value="@monHoc.MaMonHoc">@monHoc.TenMonHoc</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudSpacer />
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenAddDialog">
+        Thêm Phần
+    </MudButton>
+    <MudSpacer />
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+        Tổng: @_phanList.Count phần
+    </MudText>
+</MudToolBar>
+
+<!-- ── Bảng dữ liệu ─────────────────────────────────────────────────────── -->
+<MudDataGrid T="PhanDto"
+             Items="_phanList"
+             Filterable="true"
+             FilterMode="DataGridFilterMode.ColumnFilterRow"
+             SortMode="SortMode.Multiple"
+             Bordered="true"
+             Striped="true"
+             Hover="true"
+             Loading="_loading"
+             LoadingProgressColor="Color.Primary">
+    <Columns>
+        <PropertyColumn Property="x => x.ThuTu"        Title="Thứ tự"      Sortable="true" Filterable="true" />
+        <PropertyColumn Property="x => x.TenPhan"       Title="Tên Phần"    Sortable="true" Filterable="true" />
+        <PropertyColumn Property="x => x.TenMonHoc"     Title="Môn học"     Sortable="true" Filterable="true" />
+        <PropertyColumn Property="x => x.SoLuongCauHoi" Title="Số câu hỏi" Sortable="true" Filterable="true" />
+        <PropertyColumn Property="x => x.NoiDung"       Title="Nội dung"    Sortable="true" Filterable="true" />
+        <TemplateColumn Title="Thao tác" CellStyle="width:130px; text-align:center" Sortable="false" Filterable="false">
+            <CellTemplate>
+                <MudTooltip Text="Chỉnh sửa">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="() => OpenEditDialog(context.Item)" />
+                </MudTooltip>
+                <MudTooltip Text="Xóa">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="() => DeletePhan(context.Item)" />
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Class="mud-text-secondary">Chưa có phần nào. Nhấn "Thêm Phần" để bắt đầu.</MudText>
+    </NoRecordsContent>
+</MudDataGrid>
+
+@code {
+    List<PhanDto>   _phanList        = new();
+    List<MonHocDto> _monHocList      = new();
+    Guid            _selectedMonHocId = Guid.Empty;
+    bool            _loading          = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _monHocList = await MonHocService.GetAllAsync();
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        _loading = true;
+        _phanList = _selectedMonHocId == Guid.Empty
+            ? await PhanService.GetAllAsync()
+            : await PhanService.GetAllByMonHocAsync(_selectedMonHocId);
+        _loading = false;
+    }
+
+    async Task OnMonHocChanged(Guid maMonHoc)
+    {
+        _selectedMonHocId = maMonHoc;
+        await LoadData();
+    }
+
+    async Task OpenAddDialog()
+    {
+        var parameters = new DialogParameters<PhanDialog>
+        {
+            { x => x.MaMonHoc, _selectedMonHocId }
+        };
+        var dialog = await DialogService.ShowAsync<PhanDialog>("Thêm Phần", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    async Task OpenEditDialog(PhanDto phan)
+    {
+        var parameters = new DialogParameters<PhanDialog>
+        {
+            { x => x.ExistingPhan, phan }
+        };
+        var dialog = await DialogService.ShowAsync<PhanDialog>("Sửa Phần", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled) await LoadData();
+    }
+
+    async Task DeletePhan(PhanDto phan)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            title: "Xác nhận xóa",
+            message: $"Bạn có chắc muốn xóa phần \"{phan.TenPhan}\"?",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (confirmed == true)
+        {
+            await PhanService.DeleteAsync(phan.MaPhan);
+            Snackbar.Add("Đã xóa phần thành công", Severity.Success);
+            await LoadData();
+        }
+    }
+}
