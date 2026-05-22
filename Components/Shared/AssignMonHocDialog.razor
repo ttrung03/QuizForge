@@ -1,0 +1,114 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject MonHocService MonHocService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PlaylistAdd" Class="mr-2" />
+            Thêm môn học có sẵn vào <strong>@TenKhoa</strong>
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (_availableList.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Không còn môn học nào có thể thêm vào khoa này.</MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
+                Chọn các môn học cần thêm vào khoa này.
+                Môn học đã thuộc khoa khác sẽ được <strong>dùng chung</strong>.
+            </MudText>
+            @foreach (var mh in _availableList)
+            {
+                <MudCheckBox T="bool"
+                             Value="@_selected.Contains(mh.MaMonHoc)"
+                             ValueChanged="@(v => Toggle(mh.MaMonHoc, v))"
+                             Class="d-block mb-1">
+                    <ChildContent>
+                        <span>@mh.MaSoMonHoc — @mh.TenMonHoc</span>
+                        @if (mh.MaKhoa != null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                     Class="ml-2" Style="height:18px;font-size:11px">
+                                Dùng chung (@mh.TenKhoa)
+                            </MudChip>
+                        }
+                    </ChildContent>
+                </MudCheckBox>
+            }
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Hủy</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="@(_saving || _selected.Count == 0 || _loading)"
+                   OnClick="Submit">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Đang lưu...</span>
+            }
+            else
+            {
+                <span>Thêm (@_selected.Count)</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Guid   MaKhoa  { get; set; }
+    [Parameter] public string TenKhoa { get; set; } = string.Empty;
+
+    List<MonHocDto> _availableList = new();
+    HashSet<Guid>   _selected      = new();
+    bool            _loading       = true;
+    bool            _saving        = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _availableList = await MonHocService.GetAvailableForKhoaAsync(MaKhoa);
+        _loading = false;
+    }
+
+    void Toggle(Guid id, bool isChecked)
+    {
+        if (isChecked) _selected.Add(id);
+        else           _selected.Remove(id);
+    }
+
+    async Task Submit()
+    {
+        if (_selected.Count == 0) return;
+        _saving = true;
+        try
+        {
+            await MonHocService.AssignToKhoaAsync(_selected.ToList(), MaKhoa);
+            Snackbar.Add($"Đã thêm {_selected.Count} môn học thành công!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    void Cancel() => MudDialog.Cancel();
+}

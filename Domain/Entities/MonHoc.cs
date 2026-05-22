@@ -9,7 +9,7 @@ public class MonHoc
     [Key]
     public Guid MaMonHoc { get; set; }
 
-    public Guid MaKhoa { get; set; }
+    public Guid? MaKhoa { get; set; }
 
     [Required]
     [MaxLength(50)]
@@ -23,7 +23,7 @@ public class MonHoc
 
     // Navigation
     [ForeignKey(nameof(MaKhoa))]
-    public virtual Khoa Khoa { get; set; } = null!;
+    public virtual Khoa? Khoa { get; set; }
 
     public virtual ICollection<Phan> Phans { get; set; } = new List<Phan>();
     public virtual ICollection<DeThi> DeThis { get; set; } = new List<DeThi>();
