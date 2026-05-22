@@ -9,9 +9,32 @@ namespace QuestionBank.Web.Application.Interfaces;
 public interface IMonHocRepository
 {
     Task<List<MonHoc>> GetAllAsync();
+
+    /// <summary>Lấy môn học trực tiếp thuộc khoa (MaKhoa = maKhoa).</summary>
+    Task<List<MonHoc>> GetAllByKhoaAsync(Guid maKhoa);
+
+    /// <summary>Lấy môn học được dùng chung cho khoa (trong bảng MonHoc_KhoaChung).</summary>
+    Task<List<MonHoc>> GetSharedByKhoaAsync(Guid maKhoa);
+
+    /// <summary>Lấy môn học chưa thuộc khoa nào và chưa được share cho khoa này.</summary>
+    Task<List<MonHoc>> GetAvailableForKhoaAsync(Guid maKhoa);
+
     Task<MonHoc?> GetByIdAsync(Guid id);
     Task AddAsync(MonHoc monHoc);
     Task UpdateAsync(MonHoc monHoc);
+
+    /// <summary>Gán môn học trực tiếp vào khoa (set MaKhoa).</summary>
+    Task AssignToKhoaAsync(Guid maMonHoc, Guid maKhoa);
+
+    /// <summary>Thêm vào bảng MonHoc_KhoaChung (dùng chung).</summary>
+    Task AddSharedAsync(Guid maMonHoc, Guid maKhoa);
+
+    /// <summary>Xóa khỏi bảng MonHoc_KhoaChung (gỡ dùng chung).</summary>
+    Task RemoveSharedAsync(Guid maMonHoc, Guid maKhoa);
+
+    /// <summary>Lấy MaKhoa đầu tiên đang dùng chung môn này (null nếu không có).</summary>
+    Task<Guid?> GetFirstSharedKhoaAsync(Guid maMonHoc);
+
     Task DeleteAsync(Guid id);      // xóa cứng (dùng khi cần)
     Task SoftDeleteAsync(Guid id);  // xóa mềm: XoaTamMonHoc = true
 }

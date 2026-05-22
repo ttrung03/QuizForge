@@ -2,7 +2,6 @@
 @using QuestionBank.Web.Application.DTOs
 @using QuestionBank.Web.Application.Services
 @inject MonHocService MonHocService
-@inject KhoaService KhoaService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -16,17 +15,7 @@
 
     <DialogContent>
         <MudForm @ref="_form" @bind-IsValid="_isValid">
-            <MudSelect @bind-Value="_model.MaKhoa"
-                       Label="Khoa"
-                       Required="true"
-                       RequiredError="Vui lòng chọn khoa"
-                       Variant="Variant.Outlined"
-                       Class="mt-2">
-                @foreach (var khoa in _khoaList)
-                {
-                    <MudSelectItem Value="@khoa.MaKhoa">@khoa.TenKhoa</MudSelectItem>
-                }
-            </MudSelect>
+
 
             <MudTextField @bind-Value="_model.MaSoMonHoc"
                           Label="Mã số Môn học"
@@ -56,7 +45,7 @@
         <MudButton OnClick="Cancel" Variant="Variant.Text">Hủy</MudButton>
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
-                   Disabled="_saving"
+                   Disabled="!_isValid || _saving"
                    OnClick="Submit">
             @if (_saving)
             {
@@ -79,18 +68,16 @@
     /// có giá trị → đang chỉnh sửa, form sẽ điền sẵn dữ liệu cũ
     /// </summary>
     [Parameter] public MonHocDto? ExistingMonHoc { get; set; }
+    [Parameter] public Guid? MaKhoa { get; set; }
 
     MudForm _form    = default!;
     bool    _isValid = false;
     bool    _saving  = false;
 
-    List<KhoaDto> _khoaList = new();
-    SaveMonHocDto _model    = new();
+    SaveMonHocDto _model = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        _khoaList = await KhoaService.GetAllAsync();
-
         if (ExistingMonHoc != null)
         {
             _model.MaMonHoc   = ExistingMonHoc.MaMonHoc;
@@ -98,12 +85,16 @@
             _model.MaSoMonHoc = ExistingMonHoc.MaSoMonHoc;
             _model.TenMonHoc  = ExistingMonHoc.TenMonHoc;
         }
+        else
+        {
+            _model.MaKhoa = MaKhoa;
+        }
     }
 
     async Task Submit()
     {
         await _form.ValidateAsync();
-        if (!_form.IsValid) return;
+        if (!_isValid) return;
 
         _saving = true;
         try
