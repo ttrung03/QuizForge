@@ -21,6 +21,11 @@
 *.sln.docstates
 *.userprefs
 
+# ---------------------------------------------------------------
+# Claude / AI Tools
+# ---------------------------------------------------------------
+.claude/
+
 # Visual Studio cache / options directory
 .vs/
 # Uncomment if you need Razor pages compiled output
