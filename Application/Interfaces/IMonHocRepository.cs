@@ -35,6 +35,8 @@ public interface IMonHocRepository
     /// <summary>Lấy MaKhoa đầu tiên đang dùng chung môn này (null nếu không có).</summary>
     Task<Guid?> GetFirstSharedKhoaAsync(Guid maMonHoc);
 
-    Task DeleteAsync(Guid id);      // xóa cứng (dùng khi cần)
+    /// <summary>Xóa cứng hoàn toàn môn học: CauHoi → Phan → KhoaChung → MonHoc.</summary>
+    Task DeleteAllCauHoiByMonAsync(Guid maMonHoc);
+
     Task SoftDeleteAsync(Guid id);  // xóa mềm: XoaTamMonHoc = true
 }
