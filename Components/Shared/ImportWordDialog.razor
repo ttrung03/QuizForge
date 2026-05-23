@@ -6,7 +6,7 @@
 @inject PhanService PhanService
 @inject ISnackbar Snackbar
 
-<MudDialog Style="min-width:680px; max-height:90vh">
+<MudDialog Style="min-width:700px; max-height:90vh">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Upload" Class="mr-2" />
@@ -16,9 +16,10 @@
 
     <DialogContent>
     <div style="overflow-y:auto; max-height:calc(90vh - 160px); padding-right:4px">
+
         @* ── Bước 1: Chọn vị trí import ── *@
         <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">
-            Bước 1 — Chọn môn học và phần
+            Bước 1 — Chọn môn học, phần và cấp độ mặc định
         </MudText>
 
         <MudGrid Spacing="2">
@@ -118,7 +119,7 @@
                 </MudAlert>
             }
 
-            @if (_questions.Count == 0)
+            @if (TotalItems == 0)
             {
                 <MudAlert Severity="Severity.Error" Dense="true">
                     Không tìm thấy câu hỏi hợp lệ nào trong file. Vui lòng kiểm tra lại định dạng.
@@ -126,55 +127,123 @@
             }
             else
             {
-                <MudText Typo="Typo.body2" Class="mb-2">
-                    Tìm thấy <b>@_questions.Count</b> câu hỏi hợp lệ.
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Tìm thấy
+                    @if (_questions.Count > 0)
+                    {
+                        <b> @_questions.Count câu hỏi đơn</b>
+                    }
+                    @if (_questions.Count > 0 && _groups.Count > 0)
+                    {
+                        <span> và </span>
+                    }
+                    @if (_groups.Count > 0)
+                    {
+                        <b> @_groups.Count nhóm (@_groups.Sum(g => g.CauHoiCons.Count) câu con)</b>
+                    }
+                    <span>.</span>
                 </MudText>
 
-                <MudTable Items="_questions" Dense="true" Hover="true"
-                          Style="max-height:280px;overflow-y:auto" FixedHeader="true">
-                    <HeaderContent>
-                        <MudTh Style="width:40px">STT</MudTh>
-                        <MudTh>Nội dung</MudTh>
-                        <MudTh Style="width:110px">Đáp án đúng</MudTh>
-                        <MudTh Style="width:90px">Cấp độ</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd>@(_questions.IndexOf(context) + 1)</MudTd>
-                        <MudTd>
-                            <MudText Typo="Typo.body2" Style="white-space:normal">
-                                @Truncate(context.NoiDung)
+                @* Câu hỏi đơn *@
+                @if (_questions.Count > 0)
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">Câu hỏi đơn</MudText>
+                    <MudTable Items="_questions" Dense="true" Hover="true"
+                              Style="max-height:220px;overflow-y:auto" FixedHeader="true"
+                              Class="mb-1">
+                        <HeaderContent>
+                            <MudTh Style="width:40px">STT</MudTh>
+                            <MudTh>Nội dung</MudTh>
+                            <MudTh Style="width:120px">Đáp án đúng</MudTh>
+                            <MudTh Style="width:80px">Cấp độ</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@(_questions.IndexOf(context) + 1)</MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2" Style="white-space:normal">
+                                    @Truncate(context.NoiDung)
+                                </MudText>
+                            </MudTd>
+                            <MudTd>
+                                @{
+                                    var correct = context.Answers.FirstOrDefault(a => a.LaDapAn);
+                                    string correctLabel = correct is null
+                                        ? "—"
+                                        : $"{"ABCD"[correct.ThuTu - 1]}. {Truncate(correct.NoiDung, 25)}";
+                                }
+                                <MudText Typo="Typo.body2" Color="Color.Success">@correctLabel</MudText>
+                            </MudTd>
+                            <MudTd>
+                                @{
+                                    bool fromFile = context.CapDo.HasValue;
+                                    short capDo = context.CapDo ?? _defaultCapDo;
+                                    string capDoLabel = CapDoLabel(capDo);
+                                }
+                                <MudText Typo="Typo.body2" Color="@(fromFile ? Color.Primary : Color.Default)">
+                                    @capDoLabel@(fromFile ? " *" : "")
+                                </MudText>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                    @if (_questions.Any(q => q.CapDo.HasValue))
+                    {
+                        <MudText Typo="Typo.caption" Class="mb-2 mud-text-secondary">* Cấp độ đọc từ file Word (prefix &lt;n&gt;)</MudText>
+                    }
+                }
+
+                @* Câu hỏi nhóm *@
+                @if (_groups.Count > 0)
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Câu hỏi nhóm</MudText>
+                    @foreach (var (group, gi) in _groups.Select((g, i) => (g, i)))
+                    {
+                        <MudPaper Outlined="true" Class="pa-3 mb-2">
+                            <MudText Typo="Typo.body2" Style="font-weight:600">
+                                Nhóm @(gi + 1) — @group.CauHoiCons.Count câu con
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-2">
+                                    Cấp độ: @CapDoLabel(_defaultCapDo)
+                                </MudChip>
                             </MudText>
-                        </MudTd>
-                        <MudTd>
-                            @{
-                                var correct = context.Answers.FirstOrDefault(a => a.LaDapAn);
-                                string label = correct is null
-                                    ? "—"
-                                    : $"{"ABCD"[correct.ThuTu - 1]}. {Truncate(correct.NoiDung, 30)}";
-                            }
-                            <MudText Typo="Typo.body2" Color="Color.Success">@label</MudText>
-                        </MudTd>
-                        <MudTd>
-                            @{
-                                bool fromFile = context.CapDo.HasValue;
-                                short capDo = context.CapDo ?? _defaultCapDo;
-                                string capDoLabel = capDo switch { 1 => "Dễ", 2 => "TB", 3 => "Khó", _ => capDo.ToString() };
-                            }
-                            <MudText Typo="Typo.body2" Color="@(fromFile ? Color.Primary : Color.Default)">
-                                @capDoLabel@(fromFile ? " *" : "")
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2" Style="white-space:pre-wrap">
+                                @Truncate(group.NoiDung, 150)
                             </MudText>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-                <MudText Typo="Typo.caption" Class="mt-1 mud-text-secondary">* Cấp độ được đọc trực tiếp từ file Word (prefix &lt;n&gt;)</MudText>
+                            <MudTable Items="group.CauHoiCons" Dense="true" Hover="false"
+                                      Elevation="0" Style="background:transparent">
+                                <HeaderContent>
+                                    <MudTh Style="width:36px">Câu</MudTh>
+                                    <MudTh>Nội dung</MudTh>
+                                    <MudTh Style="width:120px">Đáp án đúng</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@(group.CauHoiCons.IndexOf(context) + 1)</MudTd>
+                                    <MudTd>
+                                        <MudText Typo="Typo.body2" Style="white-space:normal">
+                                            @Truncate(context.NoiDung)
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        @{
+                                            var sub = context.Answers.FirstOrDefault(a => a.LaDapAn);
+                                            string subLabel = sub is null
+                                                ? "—"
+                                                : $"{"ABCD"[sub.ThuTu - 1]}. {Truncate(sub.NoiDung, 25)}";
+                                        }
+                                        <MudText Typo="Typo.body2" Color="Color.Success">@subLabel</MudText>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
+                    }
+                }
             }
         }
+
     </div>
     </DialogContent>
 
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Hủy</MudButton>
-        @if (_questions.Count > 0)
+        @if (TotalItems > 0)
         {
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
@@ -188,7 +257,7 @@
                 }
                 else
                 {
-                    <span>Import @_questions.Count câu</span>
+                    <span>Import @TotalItems mục</span>
                 }
             </MudButton>
         }
@@ -200,38 +269,44 @@
 
     List<MonHocDto> _monHocList = [];
     List<PhanDto>   _phanList   = [];
-    Guid  _maMonHoc    = Guid.Empty;
-    Guid  _maPhan      = Guid.Empty;
+    Guid  _maMonHoc     = Guid.Empty;
+    Guid  _maPhan       = Guid.Empty;
     short _defaultCapDo = 1;
 
     IBrowserFile? _selectedFile;
-    bool _parsing  = false;
-    bool _parsed   = false;
+    bool _parsing   = false;
+    bool _parsed    = false;
     bool _importing = false;
 
-    List<ImportCauHoiDto> _questions = [];
-    List<string>          _warnings  = [];
+    List<ImportCauHoiDto>    _questions = [];
+    List<ImportCauHoiNhomDto> _groups   = [];
+    List<string>              _warnings = [];
+
+    // Câu đơn + (1 cha + N con) mỗi nhóm
+    int TotalItems => _questions.Count + _groups.Sum(g => 1 + g.CauHoiCons.Count);
 
     protected override async Task OnInitializedAsync()
-    {
-        _monHocList = await MonHocService.GetAllAsync();
-    }
+        => _monHocList = await MonHocService.GetAllAsync();
 
     private async Task OnMonHocChanged(Guid maMonHoc)
     {
         _maMonHoc  = maMonHoc;
         _maPhan    = Guid.Empty;
         _phanList  = await PhanService.GetAllByMonHocAsync(maMonHoc);
-        _parsed    = false;
-        _questions = [];
-        _warnings  = [];
+        ResetParseState();
     }
 
     private void OnFileSelected(IBrowserFile file)
     {
         _selectedFile = file;
+        ResetParseState();
+    }
+
+    private void ResetParseState()
+    {
         _parsed    = false;
         _questions = [];
+        _groups    = [];
         _warnings  = [];
     }
 
@@ -246,7 +321,7 @@
             await stream.CopyToAsync(ms);
             ms.Position = 0;
 
-            (_questions, _warnings) = CauHoiService.ParseWordFile(ms);
+            (_questions, _groups, _warnings) = CauHoiService.ParseWordFile(ms);
             _parsed = true;
         }
         catch (Exception ex)
@@ -269,9 +344,13 @@
         _importing = true;
         try
         {
-            int count = await CauHoiService.ImportAsync(_questions, _maPhan, _defaultCapDo);
-            Snackbar.Add($"Import thành công {count} câu hỏi!", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(count));
+            var (imported, skipped) = await CauHoiService.ImportAsync(_questions, _groups, _maPhan, _defaultCapDo);
+            string msg = skipped > 0
+                ? $"Import thành công {imported} mục. Bỏ qua {skipped} câu trùng lặp."
+                : $"Import thành công {imported} mục!";
+            Severity severity = skipped > 0 ? Severity.Warning : Severity.Success;
+            Snackbar.Add(msg, severity);
+            MudDialog.Close(DialogResult.Ok(imported));
         }
         catch (Exception ex)
         {
@@ -285,6 +364,6 @@
 
     private void Cancel() => MudDialog.Cancel();
 
-    private static string Truncate(string s, int max = 80)
-        => s.Length <= max ? s : s[..max] + "…";
+    private static string CapDoLabel(short n) => n switch { 1 => "Dễ", 2 => "TB", 3 => "Khó", _ => n.ToString() };
+    private static string Truncate(string s, int max = 80) => s.Length <= max ? s : s[..max] + "…";
 }

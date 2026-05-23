@@ -7,108 +7,199 @@ namespace QuestionBank.Web.Application.Services;
 
 /// <summary>
 /// Parse file .docx theo định dạng chuẩn HUTECH (Số 73/HD-KT).
-/// Chỉ xử lý câu hỏi đơn; câu nhóm và câu nghe không nằm trong phạm vi.
+/// Hỗ trợ câu hỏi đơn và câu hỏi nhóm.
 /// </summary>
 public class WordImportService
 {
-    private static readonly Regex CloPrefix = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
-    private static readonly Regex AnswerLine = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
-    private static readonly Regex CapDoPrefix = new(@"^\(<(\d+)>\)", RegexOptions.Compiled);
+    private static readonly Regex CloPrefix    = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
+    private static readonly Regex AnswerLine   = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
+//    private static readonly Regex CapDoPrefix  = new(@"^\(<(\d+)>\)", RegexOptions.Compiled);
     private const string EndMarker = "[<br>]";
 
-    public (List<ImportCauHoiDto> Questions, List<string> Warnings) Parse(Stream stream)
+    private enum ParseState { Normal, CollectingPassage, CollectingSubQuestions }
+
+    public (List<ImportCauHoiDto> Questions, List<ImportCauHoiNhomDto> Groups, List<string> Warnings) Parse(Stream stream)
     {
         var questions = new List<ImportCauHoiDto>();
-        var warnings = new List<string>();
+        var groups    = new List<ImportCauHoiNhomDto>();
+        var warnings  = new List<string>();
 
-        using var doc = WordprocessingDocument.Open(stream, isEditable: false);
+        using var doc  = WordprocessingDocument.Open(stream, isEditable: false);
         var body = doc.MainDocumentPart?.Document?.Body;
-        if (body is null) return (questions, warnings);
+        if (body is null) return (questions, groups, warnings);
 
         var paragraphs = body.Elements<Paragraph>().ToList();
 
+        ParseState state = ParseState.Normal;
+
+        // Normal state
         ImportCauHoiDto? current = null;
+
+        // Group state
+        ImportCauHoiNhomDto? currentGroup = null;
+        List<string>         passageLines = [];
+        ImportCauHoiDto?     currentSub   = null;
+
         int paraIndex = 0;
 
         foreach (var para in paragraphs)
         {
             paraIndex++;
             string text = GetParagraphText(para).Trim();
+            if (string.IsNullOrEmpty(text)) continue;
 
-            if (string.IsNullOrEmpty(text))
+            // ── CollectingPassage ────────────────────────────────────────────
+            if (state == ParseState.CollectingPassage)
+            {
+                if (text == "[<egc>]")
+                {
+                    currentGroup!.NoiDung = string.Join("\n", passageLines).Trim();
+                    passageLines.Clear();
+                    state = ParseState.CollectingSubQuestions;
+                }
+                else
+                {
+                    passageLines.Add(text);
+                }
                 continue;
+            }
 
-            // Bỏ qua ký hiệu nhóm — không xử lý trong phiên bản này
-            if (text is "[<sg>]" or "[</sg>]" or "[<egc>]")
+            // ── CollectingSubQuestions ───────────────────────────────────────
+            if (state == ParseState.CollectingSubQuestions)
+            {
+                if (text == "[</sg>]")
+                {
+                    FinalizeSubQuestion(currentSub, currentGroup!, warnings, paraIndex);
+                    currentSub = null;
+
+                    if (currentGroup!.CauHoiCons.Count > 0)
+                        groups.Add(currentGroup);
+                    else
+                        warnings.Add($"Nhóm câu hỏi \"{Truncate(currentGroup.NoiDung)}\" không có câu hỏi con hợp lệ, bị bỏ qua.");
+
+                    currentGroup = null;
+                    state = ParseState.Normal;
+                }
+                else if (text == EndMarker)
+                {
+                    FinalizeSubQuestion(currentSub, currentGroup!, warnings, paraIndex);
+                    currentSub = null;
+                }
+                else if (IsCloLine(text))
+                {
+                    // (<n>) tại đây là chỉ số câu con trong nhóm, KHÔNG phải cấp độ
+                    currentSub = new ImportCauHoiDto
+                    {
+                        CloText = ExtractClo(text),
+                        CapDo   = null,
+                        NoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim()
+                    };
+                }
+                else
+                {
+                    var m = AnswerLine.Match(text);
+                    if (m.Success && currentSub is not null)
+                    {
+                        char letter = m.Groups[1].Value[0];
+                        currentSub.Answers.Add(new ImportCauTraLoiDto
+                        {
+                            ThuTu   = "ABCD".IndexOf(letter) + 1,
+                            NoiDung = m.Groups[2].Value.Trim(),
+                            LaDapAn = HasUnderline(para),
+                            HoanVi  = !HasItalic(para)
+                        });
+                    }
+                }
                 continue;
+            }
+
+            // ── Normal ───────────────────────────────────────────────────────
+
+            if (text == "[<sg>]")
+            {
+                if (current is not null)
+                {
+                    warnings.Add($"Câu hỏi \"{Truncate(current.NoiDung)}\" bị ngắt bởi [<sg>], bị bỏ qua.");
+                    current = null;
+                }
+                currentGroup = new ImportCauHoiNhomDto();
+                passageLines.Clear();
+                state = ParseState.CollectingPassage;
+                continue;
+            }
+
+            // Marker lạc trong Normal → bỏ qua
+            if (text is "[</sg>]" or "[<egc>]") continue;
 
             if (text == EndMarker)
             {
                 if (current is not null)
                 {
                     var warning = ValidateQuestion(current, paraIndex);
-                    if (warning is null)
-                        questions.Add(current);
-                    else
-                        warnings.Add(warning);
+                    if (warning is null) questions.Add(current);
+                    else warnings.Add(warning);
                 }
                 current = null;
                 continue;
             }
 
-            // Dòng bắt đầu câu hỏi: (CLO...) hoặc (<n>)(CLO...)
             if (IsCloLine(text))
             {
                 current = new ImportCauHoiDto
                 {
                     CloText = ExtractClo(text),
-                    CapDo   = ExtractCapDo(text),
+                   // CapDo   = ExtractCapDo(text),
                     NoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim()
                 };
                 continue;
             }
 
-            // Dòng đáp án: A. / B. / C. / D.
             var match = AnswerLine.Match(text);
             if (match.Success && current is not null)
             {
                 char letter = match.Groups[1].Value[0];
-                bool isCorrect = HasUnderline(para);
-                bool noPermute = HasItalic(para);
-
                 current.Answers.Add(new ImportCauTraLoiDto
                 {
-                    ThuTu = "ABCD".IndexOf(letter) + 1,
+                    ThuTu   = "ABCD".IndexOf(letter) + 1,
                     NoiDung = match.Groups[2].Value.Trim(),
-                    LaDapAn = isCorrect,
-                    HoanVi = !noPermute
+                    LaDapAn = HasUnderline(para),
+                    HoanVi  = !HasItalic(para)
                 });
             }
         }
 
-        // Câu dang dở cuối file (thiếu [<br>]) → bỏ qua
+        // Dọn cuối file
         if (current is not null)
             warnings.Add($"Câu hỏi cuối file chưa có [<br>] kết thúc, bị bỏ qua: \"{Truncate(current.NoiDung)}\"");
 
-        return (questions, warnings);
+        if (state != ParseState.Normal)
+            warnings.Add("File kết thúc trong khi đang xử lý câu hỏi nhóm chưa hoàn chỉnh, bị bỏ qua.");
+
+        return (questions, groups, warnings);
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
+
+    private static void FinalizeSubQuestion(ImportCauHoiDto? sub, ImportCauHoiNhomDto group,
+        List<string> warnings, int paraIndex)
+    {
+        if (sub is null) return;
+        var w = ValidateQuestion(sub, paraIndex);
+        if (w is null) group.CauHoiCons.Add(sub);
+        else warnings.Add(w);
+    }
 
     private static string GetParagraphText(Paragraph para)
         => string.Concat(para.Elements<Run>().Select(r => r.InnerText));
 
     private static bool IsCloLine(string text)
     {
-        // Khớp: (CLO1) ... hoặc (<1>)(CLO1) ...
         var stripped = StripSubQuestionIndex(text);
-        return stripped.StartsWith("(CLO", StringComparison.OrdinalIgnoreCase)
-            || stripped.StartsWith("(clo", StringComparison.OrdinalIgnoreCase);
+        return stripped.StartsWith("(CLO", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string StripSubQuestionIndex(string text)
     {
-        // Loại bỏ prefix (<n>) nếu có, ví dụ: (<1>)(CLO1) ...
         var m = Regex.Match(text, @"^\(<\d+>\)\s*(.+)");
         return m.Success ? m.Groups[1].Value : text;
     }
@@ -120,19 +211,15 @@ public class WordImportService
         return m.Success ? m.Value : null;
     }
 
-    /// <summary>Trích cấp độ từ prefix (&lt;n&gt;) — VD: (&lt;2&gt;)(CLO1) → 2. Trả null nếu không có prefix.</summary>
-    private static short? ExtractCapDo(string text)
-    {
-        var m = CapDoPrefix.Match(text);
-        if (!m.Success) return null;
-        var n = short.Parse(m.Groups[1].Value);
-        return (n >= 1 && n <= 3) ? n : (short)1;
-    }
+    /// <summary>Trích cấp độ từ prefix (&lt;n&gt;) — chỉ dùng trong Normal state. Trả null nếu không có prefix.</summary>
+    // private static short? ExtractCapDo(string text)
+    // {
+    //     var m = CapDoPrefix.Match(text);
+    //     if (!m.Success) return null;
+    //     var n = short.Parse(m.Groups[1].Value);
+    //     return (n >= 1 && n <= 3) ? n : (short)1;
+    // }
 
-    /// <summary>
-    /// Kiểm tra run đầu tiên chứa ký tự A/B/C/D có underline không.
-    /// Underline được đặt trên ký tự letter + dấu chấm để chỉ đáp án đúng.
-    /// </summary>
     private static bool HasUnderline(Paragraph para)
     {
         foreach (var run in para.Elements<Run>())
@@ -140,7 +227,6 @@ public class WordImportService
             var inner = run.InnerText;
             if (inner.Length == 0) continue;
             if (!"ABCD".Contains(inner[0])) continue;
-
             var u = run.RunProperties?.Underline;
             if (u is null) return false;
             var val = u.Val?.Value;
@@ -149,10 +235,6 @@ public class WordImportService
         return false;
     }
 
-    /// <summary>
-    /// Kiểm tra run đầu tiên chứa ký tự A/B/C/D có italic không.
-    /// Italic trên letter nghĩa là đáp án này không được hoán vị.
-    /// </summary>
     private static bool HasItalic(Paragraph para)
     {
         foreach (var run in para.Elements<Run>())
@@ -160,7 +242,6 @@ public class WordImportService
             var inner = run.InnerText;
             if (inner.Length == 0) continue;
             if (!"ABCD".Contains(inner[0])) continue;
-
             return run.RunProperties?.Italic != null;
         }
         return false;
