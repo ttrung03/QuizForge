@@ -142,15 +142,7 @@ public class MonHocRepository : IMonHocRepository
         await _context.SaveChangesAsync();
     }
 
-    /// <summary>Xóa cứng — dùng khi thực sự muốn xóa khỏi DB.</summary>
-    public async Task DeleteAsync(Guid id)
-    {
-        var monHoc = await _context.MonHocs.FindAsync(id);
-        if (monHoc is null) return;
 
-        _context.MonHocs.Remove(monHoc);
-        await _context.SaveChangesAsync();
-    }
 
     /// <summary>Xóa mềm — chỉ đánh dấu, dữ liệu vẫn còn trong DB.</summary>
     public async Task SoftDeleteAsync(Guid id)
@@ -159,6 +151,87 @@ public class MonHocRepository : IMonHocRepository
         if (monHoc is null) return;
 
         monHoc.XoaTamMonHoc = true;
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Xóa cứng hoàn toàn môn học khỏi DB.
+    /// Thứ tự xóa đúng FK: FileDinhKem → CauTraLoi → ChiTietDeThi → CauHoi → Phan → KhoaChung → MonHoc.
+    /// </summary>
+    public async Task DeleteAllCauHoiByMonAsync(Guid maMonHoc)
+    {
+        // Lấy tất cả MaPhan thuộc môn này
+        var maPhanList = await _context.Phans
+            .Where(p => p.MaMonHoc == maMonHoc)
+            .Select(p => p.MaPhan)
+            .ToListAsync();
+
+        if (maPhanList.Count > 0)
+        {
+            // Lấy tất cả MaCauHoi thuộc các Phan này
+            var maCauHoiList = await _context.CauHois
+                .Where(c => maPhanList.Contains(c.MaPhan))
+                .Select(c => c.MaCauHoi)
+                .ToListAsync();
+
+            if (maCauHoiList.Count > 0)
+            {
+                // 1a) Xóa FileDinhKem → CauHoi
+                var files = await _context.Files
+                    .Where(f => f.MaCauHoi.HasValue && maCauHoiList.Contains(f.MaCauHoi.Value))
+                    .ToListAsync();
+                if (files.Count > 0)
+                    _context.Files.RemoveRange(files);
+
+                // 1b) Xóa CauTraLoi → CauHoi
+                var cauTraLois = await _context.CauTraLois
+                    .Where(c => maCauHoiList.Contains(c.MaCauHoi))
+                    .ToListAsync();
+                if (cauTraLois.Count > 0)
+                    _context.CauTraLois.RemoveRange(cauTraLois);
+
+                // 1c) Xóa ChiTietDeThi → CauHoi
+                var chiTiets = await _context.ChiTietDeThis
+                    .Where(ct => maCauHoiList.Contains(ct.MaCauHoi))
+                    .ToListAsync();
+                if (chiTiets.Count > 0)
+                    _context.ChiTietDeThis.RemoveRange(chiTiets);
+
+                // 1d) Xóa CauHoi con trước (tự tham chiếu MaCauHoiCha)
+                var cauHoiCons = await _context.CauHois
+                    .Where(c => c.MaCauHoiCha.HasValue && maCauHoiList.Contains(c.MaCauHoiCha.Value))
+                    .ToListAsync();
+                if (cauHoiCons.Count > 0)
+                    _context.CauHois.RemoveRange(cauHoiCons);
+
+                // 1e) Xóa CauHoi cha (câu độc lập và câu nhóm)
+                var cauHois = await _context.CauHois
+                    .Where(c => maPhanList.Contains(c.MaPhan) && c.MaCauHoiCha == null)
+                    .ToListAsync();
+                if (cauHois.Count > 0)
+                    _context.CauHois.RemoveRange(cauHois);
+            }
+
+            // 2) Xóa Phan
+            var phans = await _context.Phans
+                .Where(p => p.MaMonHoc == maMonHoc)
+                .ToListAsync();
+            if (phans.Count > 0)
+                _context.Phans.RemoveRange(phans);
+        }
+
+        // 3) Xóa liên kết KhoaChung
+        var links = await _context.MonHocKhoaChungs
+            .Where(mkc => mkc.MaMonHoc == maMonHoc)
+            .ToListAsync();
+        if (links.Count > 0)
+            _context.MonHocKhoaChungs.RemoveRange(links);
+
+        // 4) Xóa chính MonHoc
+        var monHoc = await _context.MonHocs.FindAsync(maMonHoc);
+        if (monHoc is not null)
+            _context.MonHocs.Remove(monHoc);
+
         await _context.SaveChangesAsync();
     }
 }

@@ -6,7 +6,7 @@
 @inject PhanService PhanService
 @inject ISnackbar Snackbar
 
-<MudDialog Style="min-width:680px">
+<MudDialog Style="min-width:680px; max-height:90vh">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Upload" Class="mr-2" />
@@ -15,6 +15,7 @@
     </TitleContent>
 
     <DialogContent>
+    <div style="overflow-y:auto; max-height:calc(90vh - 160px); padding-right:4px">
         @* ── Bước 1: Chọn vị trí import ── *@
         <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">
             Bước 1 — Chọn môn học và phần
@@ -44,6 +45,16 @@
                     {
                         <MudSelectItem Value="@p.MaPhan">@p.TenPhan</MudSelectItem>
                     }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6">
+                <MudSelect @bind-Value="_defaultCapDo"
+                           Label="Cấp độ mặc định"
+                           HelperText="Áp dụng cho câu không có ký hiệu (<n>) trong file"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((short)1)">1 — Dễ</MudSelectItem>
+                    <MudSelectItem Value="@((short)2)">2 — Trung bình</MudSelectItem>
+                    <MudSelectItem Value="@((short)3)">3 — Khó</MudSelectItem>
                 </MudSelect>
             </MudItem>
         </MudGrid>
@@ -122,9 +133,10 @@
                 <MudTable Items="_questions" Dense="true" Hover="true"
                           Style="max-height:280px;overflow-y:auto" FixedHeader="true">
                     <HeaderContent>
-                        <MudTh Style="width:48px">STT</MudTh>
+                        <MudTh Style="width:40px">STT</MudTh>
                         <MudTh>Nội dung</MudTh>
-                        <MudTh Style="width:160px">Đáp án đúng</MudTh>
+                        <MudTh Style="width:110px">Đáp án đúng</MudTh>
+                        <MudTh Style="width:90px">Cấp độ</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd>@(_questions.IndexOf(context) + 1)</MudTd>
@@ -142,10 +154,22 @@
                             }
                             <MudText Typo="Typo.body2" Color="Color.Success">@label</MudText>
                         </MudTd>
+                        <MudTd>
+                            @{
+                                bool fromFile = context.CapDo.HasValue;
+                                short capDo = context.CapDo ?? _defaultCapDo;
+                                string capDoLabel = capDo switch { 1 => "Dễ", 2 => "TB", 3 => "Khó", _ => capDo.ToString() };
+                            }
+                            <MudText Typo="Typo.body2" Color="@(fromFile ? Color.Primary : Color.Default)">
+                                @capDoLabel@(fromFile ? " *" : "")
+                            </MudText>
+                        </MudTd>
                     </RowTemplate>
                 </MudTable>
+                <MudText Typo="Typo.caption" Class="mt-1 mud-text-secondary">* Cấp độ được đọc trực tiếp từ file Word (prefix &lt;n&gt;)</MudText>
             }
         }
+    </div>
     </DialogContent>
 
     <DialogActions>
@@ -176,8 +200,9 @@
 
     List<MonHocDto> _monHocList = [];
     List<PhanDto>   _phanList   = [];
-    Guid _maMonHoc = Guid.Empty;
-    Guid _maPhan   = Guid.Empty;
+    Guid  _maMonHoc    = Guid.Empty;
+    Guid  _maPhan      = Guid.Empty;
+    short _defaultCapDo = 1;
 
     IBrowserFile? _selectedFile;
     bool _parsing  = false;
@@ -244,7 +269,7 @@
         _importing = true;
         try
         {
-            int count = await CauHoiService.ImportAsync(_questions, _maPhan);
+            int count = await CauHoiService.ImportAsync(_questions, _maPhan, _defaultCapDo);
             Snackbar.Add($"Import thành công {count} câu hỏi!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(count));
         }

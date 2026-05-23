@@ -141,4 +141,16 @@ public class MonHocService
             await _repo.SoftDeleteAsync(id);
         }
     }
+
+    /// <summary>
+    /// Xóa cứng hoàn toàn môn học: CauHoi → Phan → KhoaChung → MonHoc.
+    /// </summary>
+    public async Task DeleteAllAsync(Guid id)
+        => await _repo.DeleteAllCauHoiByMonAsync(id);
+
+    /// <summary>
+    /// Alias để UI gọi trực tiếp — gom toàn bộ logic xóa cứng vào repository.
+    /// </summary>
+    public async Task DeleteAllCauHoiByMonAsync(Guid id)
+        => await _repo.DeleteAllCauHoiByMonAsync(id);
 }
