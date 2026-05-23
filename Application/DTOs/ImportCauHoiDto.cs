@@ -9,6 +9,14 @@ public class ImportCauHoiDto
     public List<ImportCauTraLoiDto> Answers { get; set; } = [];
 }
 
+/// <summary>Nhóm câu hỏi: passage thu thập giữa [&lt;sg&gt;] và [&lt;egc&gt;], câu con thu thập giữa [&lt;egc&gt;] và [&lt;/sg&gt;].</summary>
+public class ImportCauHoiNhomDto
+{
+    public string NoiDung { get; set; } = string.Empty;
+    public short? CapDo { get; set; }
+    public List<ImportCauHoiDto> CauHoiCons { get; set; } = [];
+}
+
 public class ImportCauTraLoiDto
 {
     /// <summary>1=A, 2=B, 3=C, 4=D</summary>

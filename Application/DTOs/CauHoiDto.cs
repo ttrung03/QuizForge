@@ -8,7 +8,11 @@ public class CauHoiDto
     public string? NoiDung { get; set; }
     public bool HoanVi { get; set; }
     public short CapDo { get; set; }
+    public int SoCauHoiCon { get; set; }
     public List<CauTraLoiDto> CauTraLois { get; set; } = [];
+    public List<CauHoiDto> CauHoiCons { get; set; } = [];
+
+    public bool LaCauNhom => SoCauHoiCon > 0;
 }
 
 public class CauTraLoiDto
