@@ -34,8 +34,8 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
     public (List<ImportCauHoiDto> Questions, List<string> Warnings) ParseWordFile(Stream stream)
         => importService.Parse(stream);
 
-    /// <summary>Lưu danh sách câu hỏi đã parse vào Phan được chọn.</summary>
-    public async Task<int> ImportAsync(List<ImportCauHoiDto> questions, Guid maPhan)
+    /// <summary>Lưu danh sách câu hỏi đã parse vào Phan được chọn. defaultCapDo áp cho các câu không có prefix cấp độ trong file Word.</summary>
+    public async Task<int> ImportAsync(List<ImportCauHoiDto> questions, Guid maPhan, short defaultCapDo = 1)
     {
         int maxSo = await repo.GetMaxMaSoCauHoiAsync(maPhan);
         int counter = maxSo + 1;
@@ -48,7 +48,7 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
                 MaSoCauHoi  = counter++,
                 NoiDung     = q.NoiDung,
                 HoanVi      = true,
-                CapDo       = 1,
+                CapDo       = q.CapDo ?? defaultCapDo,
                 SoCauHoiCon = 0,
                 NgayTao     = DateTime.Now
             };

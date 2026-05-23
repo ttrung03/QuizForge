@@ -4,6 +4,8 @@ public class ImportCauHoiDto
 {
     public string NoiDung { get; set; } = string.Empty;
     public string? CloText { get; set; }
+    /// <summary>1=Dễ, 2=Trung bình, 3=Khó. Lấy từ prefix (&lt;n&gt;) trong file Word. null nếu file không có prefix (sẽ dùng giá trị mặc định do người dùng chọn khi import).</summary>
+    public short? CapDo { get; set; }
     public List<ImportCauTraLoiDto> Answers { get; set; } = [];
 }
 

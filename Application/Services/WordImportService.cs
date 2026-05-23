@@ -13,6 +13,7 @@ public class WordImportService
 {
     private static readonly Regex CloPrefix = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
     private static readonly Regex AnswerLine = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex CapDoPrefix = new(@"^\(<(\d+)>\)", RegexOptions.Compiled);
     private const string EndMarker = "[<br>]";
 
     public (List<ImportCauHoiDto> Questions, List<string> Warnings) Parse(Stream stream)
@@ -61,6 +62,7 @@ public class WordImportService
                 current = new ImportCauHoiDto
                 {
                     CloText = ExtractClo(text),
+                    CapDo   = ExtractCapDo(text),
                     NoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim()
                 };
                 continue;
@@ -116,6 +118,15 @@ public class WordImportService
         var stripped = StripSubQuestionIndex(text);
         var m = Regex.Match(stripped, @"^\(CLO[^)]*\)", RegexOptions.IgnoreCase);
         return m.Success ? m.Value : null;
+    }
+
+    /// <summary>Trích cấp độ từ prefix (&lt;n&gt;) — VD: (&lt;2&gt;)(CLO1) → 2. Trả null nếu không có prefix.</summary>
+    private static short? ExtractCapDo(string text)
+    {
+        var m = CapDoPrefix.Match(text);
+        if (!m.Success) return null;
+        var n = short.Parse(m.Groups[1].Value);
+        return (n >= 1 && n <= 3) ? n : (short)1;
     }
 
     /// <summary>
