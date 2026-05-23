@@ -57,7 +57,7 @@
     </MudItem>
 </MudGrid>
 
-@* ── DataGrid ── *@
+@* ── Content ── *@
 @if (_maPhan == Guid.Empty)
 {
     <MudAlert Severity="Severity.Info" Dense="true">
@@ -76,49 +76,138 @@ else if (_questions.Count == 0)
 }
 else
 {
-    <MudDataGrid Items="_questions" Hover="true" Dense="true" SortMode="SortMode.None">
-        <Columns>
-            <PropertyColumn Property="x => x.MaSoCauHoi" Title="STT" Style="width:64px" />
-            <TemplateColumn Title="Nội dung" CellStyle="max-width:500px">
-                <CellTemplate>
-                    <MudText Typo="Typo.body2" Style="white-space:normal">
-                        @Truncate(context.Item.NoiDung ?? "", 120)
-                    </MudText>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Đáp án đúng" Style="width:200px">
-                <CellTemplate>
-                    @{
-                        var correct = context.Item.CauTraLois.FirstOrDefault(a => a.LaDapAn);
-                        string label = correct is null
-                            ? "—"
-                            : $"{"ABCD"[correct.ThuTu - 1]}. {Truncate(correct.NoiDung ?? "", 40)}";
-                    }
-                    <MudText Typo="Typo.body2" Color="Color.Success">@label</MudText>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Cấp độ" Style="width:90px">
-                <CellTemplate>
-                    <MudChip T="string"
-                             Size="Size.Small"
-                             Color="@CapDoColor(context.Item.CapDo)">
-                        @CapDoLabel(context.Item.CapDo)
-                    </MudChip>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Thao tác" Style="width:80px">
-                <CellTemplate>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                   Size="Size.Small"
-                                   Color="Color.Error"
-                                   OnClick="() => DeleteAsync(context.Item.MaCauHoi)" />
-                </CellTemplate>
-            </TemplateColumn>
-        </Columns>
-    </MudDataGrid>
+    var singles = _questions.Where(q => !q.LaCauNhom).ToList();
+    var groups  = _questions.Where(q =>  q.LaCauNhom).ToList();
 
-    <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
-        Tổng: @_questions.Count câu hỏi
+    @* ── Câu hỏi đơn ── *@
+    @if (singles.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-2">
+            Câu hỏi đơn
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-1">@singles.Count</MudChip>
+        </MudText>
+
+        <MudDataGrid Items="singles" Hover="true" Dense="true" SortMode="SortMode.None" Class="mb-5">
+            <Columns>
+                <PropertyColumn Property="x => x.MaSoCauHoi" Title="STT" Style="width:64px" />
+                <TemplateColumn Title="Nội dung" CellStyle="max-width:480px">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2" Style="white-space:normal">
+                            @Truncate(context.Item.NoiDung ?? "", 120)
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Đáp án đúng" Style="width:200px">
+                    <CellTemplate>
+                        @{
+                            var correct = context.Item.CauTraLois.FirstOrDefault(a => a.LaDapAn);
+                            string label = correct is null
+                                ? "—"
+                                : $"{"ABCD"[correct.ThuTu - 1]}. {Truncate(correct.NoiDung ?? "", 40)}";
+                        }
+                        <MudText Typo="Typo.body2" Color="Color.Success">@label</MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Cấp độ" Style="width:90px">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(context.Item.CapDo)">
+                            @CapDoLabel(context.Item.CapDo)
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="" Style="width:56px">
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small" Color="Color.Error"
+                                       OnClick="() => DeleteAsync(context.Item.MaCauHoi)" />
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+
+    @* ── Câu hỏi nhóm ── *@
+    @if (groups.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-2">
+            Câu hỏi nhóm
+            <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-1">@groups.Count nhóm</MudChip>
+        </MudText>
+
+        <MudExpansionPanels MultiExpansion="true" Class="mb-4">
+            @foreach (var grp in groups)
+            {
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3" style="width:100%">
+                            <MudText Typo="Typo.body2" Style="min-width:40px">
+                                #@grp.MaSoCauHoi
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mr-1">
+                                @grp.SoCauHoiCon câu con
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="@CapDoColor(grp.CapDo)">
+                                @CapDoLabel(grp.CapDo)
+                            </MudChip>
+                            <MudText Typo="Typo.body2" Class="flex-grow-1" Style="white-space:normal">
+                                @Truncate(grp.NoiDung ?? "", 100)
+                            </MudText>
+                            <span @onclick:stopPropagation="true">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => DeleteAsync(grp.MaCauHoi))" />
+                            </span>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        @if (grp.CauHoiCons.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary pa-2">
+                                Không có câu hỏi con.
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudTable Items="grp.CauHoiCons" Dense="true" Hover="true"
+                                      Elevation="0" Style="background:transparent">
+                                <HeaderContent>
+                                    <MudTh Style="width:48px">Câu</MudTh>
+                                    <MudTh>Nội dung</MudTh>
+                                    <MudTh Style="width:200px">Đáp án đúng</MudTh>
+                                    <MudTh Style="width:90px">Cấp độ</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@(grp.CauHoiCons.IndexOf(context) + 1)</MudTd>
+                                    <MudTd>
+                                        <MudText Typo="Typo.body2" Style="white-space:normal">
+                                            @Truncate(context.NoiDung ?? "", 120)
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        @{
+                                            var ca = context.CauTraLois.FirstOrDefault(a => a.LaDapAn);
+                                            string ca_label = ca is null
+                                                ? "—"
+                                                : $"{"ABCD"[ca.ThuTu - 1]}. {Truncate(ca.NoiDung ?? "", 40)}";
+                                        }
+                                        <MudText Typo="Typo.body2" Color="Color.Success">@ca_label</MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(context.CapDo)">
+                                            @CapDoLabel(context.CapDo)
+                                        </MudChip>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                    </ChildContent>
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanels>
+    }
+
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+        Tổng: @singles.Count câu đơn + @groups.Count nhóm (@groups.Sum(g => g.SoCauHoiCon) câu con)
     </MudText>
 }
 
@@ -132,19 +221,16 @@ else
     bool _loading  = false;
 
     protected override async Task OnInitializedAsync()
-    {
-        _monHocList = await MonHocService.GetAllAsync();
-    }
+        => _monHocList = await MonHocService.GetAllAsync();
 
     private async Task OnMonHocChanged(Guid maMonHoc)
     {
         _maMonHoc  = maMonHoc;
         _maPhan    = Guid.Empty;
         _questions = [];
-        if (maMonHoc != Guid.Empty)
-            _phanList = await PhanService.GetAllByMonHocAsync(maMonHoc);
-        else
-            _phanList = [];
+        _phanList  = maMonHoc != Guid.Empty
+            ? await PhanService.GetAllByMonHocAsync(maMonHoc)
+            : [];
     }
 
     private async Task OnPhanChanged(Guid maPhan)
@@ -155,13 +241,9 @@ else
 
     private async Task LoadQuestionsAsync()
     {
-        if (_maPhan == Guid.Empty)
-        {
-            _questions = [];
-            return;
-        }
+        if (_maPhan == Guid.Empty) { _questions = []; return; }
         _loading = true;
-        try { _questions = await CauHoiService.GetByPhanAsync(_maPhan); }
+        try   { _questions = await CauHoiService.GetByPhanAsync(_maPhan); }
         finally { _loading = false; }
     }
 
@@ -176,15 +258,18 @@ else
 
     private async Task DeleteAsync(Guid id)
     {
-        bool? confirmed = await DialogService.ShowMessageBoxAsync(
-            "Xác nhận xóa",
-            "Bạn có chắc muốn xóa câu hỏi này?",
+        var q = _questions.FirstOrDefault(x => x.MaCauHoi == id);
+        string msg = q?.LaCauNhom == true
+            ? $"Xóa nhóm này sẽ xóa cả {q.SoCauHoiCon} câu con. Tiếp tục?"
+            : "Bạn có chắc muốn xóa câu hỏi này?";
+
+        bool? confirmed = await DialogService.ShowMessageBoxAsync("Xác nhận xóa", msg,
             yesText: "Xóa", cancelText: "Hủy");
 
         if (confirmed == true)
         {
             await CauHoiService.DeleteAsync(id);
-            Snackbar.Add("Đã xóa câu hỏi.", Severity.Success);
+            Snackbar.Add("Đã xóa.", Severity.Success);
             await LoadQuestionsAsync();
         }
     }
