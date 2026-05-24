@@ -1,0 +1,218 @@
+@page "/dethi"
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using QuestionBank.Web.Components.Shared
+@inject DeThiService DeThiService
+@inject MonHocService MonHocService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Quản lý Đề thi</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-2" />
+    Quản lý Đề thi
+</MudText>
+
+@* ── Filter + Action ── *@
+<MudGrid Spacing="2" Class="mb-3">
+    <MudItem xs="12" sm="8">
+        <MudSelect T="Guid"
+                   Value="_maMonHoc"
+                   ValueChanged="OnMonHocChanged"
+                   Label="Môn học"
+                   Variant="Variant.Outlined"
+                   Clearable="true">
+            @foreach (var mh in _monHocList)
+            {
+                <MudSelectItem Value="@mh.MaMonHoc">@mh.TenMonHoc</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="4" Class="d-flex align-end">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.NoteAdd"
+                   Disabled="@(_maMonHoc == Guid.Empty)"
+                   OnClick="OpenCreateDialog"
+                   FullWidth="true">
+            Tạo đề thi mới
+        </MudButton>
+    </MudItem>
+</MudGrid>
+
+@* ── Content ── *@
+@if (_maMonHoc == Guid.Empty)
+{
+    <MudAlert Severity="Severity.Info" Dense="true">
+        Vui lòng chọn Môn học để xem danh sách đề thi.
+    </MudAlert>
+}
+else if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_deThiList.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Dense="true">
+        Chưa có đề thi nào. Nhấn <b>Tạo đề thi mới</b> để tạo.
+    </MudAlert>
+}
+else
+{
+    <MudExpansionPanels MultiExpansion="true">
+        @foreach (var dt in _deThiList)
+        {
+            <MudExpansionPanel>
+                <TitleContent>
+                    <div class="d-flex align-center gap-3" style="width:100%">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
+                        <MudText Typo="Typo.body1" Class="flex-grow-1"><b>@dt.TenDeThi</b></MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                            @dt.SoCauHoi câu
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="@(dt.DaDuyet == true ? Color.Success : Color.Default)">
+                            @(dt.DaDuyet == true ? "Đã duyệt" : "Chưa duyệt")
+                        </MudChip>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary mr-2">
+                            @dt.NgayTao.ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                        <span @onclick:stopPropagation="true">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => DeleteAsync(dt.MaDeThi, dt.TenDeThi))" />
+                        </span>
+                    </div>
+                </TitleContent>
+                <ChildContent>
+                    @if (dt.ChiTietDeThis.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary pa-2">
+                            Đề thi không có câu hỏi.
+                        </MudText>
+                    }
+                    else
+                    {
+                        @* Nhóm theo Phần *@
+                        @foreach (var phanGroup in dt.ChiTietDeThis.GroupBy(c => c.TenPhan))
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary px-2 pt-2 d-block">
+                                PHẦN: @phanGroup.Key (@phanGroup.Count() câu)
+                            </MudText>
+                            <MudTable Items="phanGroup.ToList()" Dense="true" Hover="true"
+                                      Elevation="0" Style="background:transparent" Class="mb-2">
+                                <HeaderContent>
+                                    <MudTh Style="width:48px">STT</MudTh>
+                                    <MudTh>Nội dung câu hỏi</MudTh>
+                                    <MudTh Style="width:200px">Đáp án đúng</MudTh>
+                                    <MudTh Style="width:80px">Cấp độ</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@context.ThuTu</MudTd>
+                                    <MudTd>
+                                        <MudText Typo="Typo.body2" Style="white-space:normal">
+                                            @Truncate(context.NoiDung ?? "", 120)
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        @{
+                                            var correct = context.CauTraLois.FirstOrDefault(a => a.LaDapAn);
+                                            string label = correct is null
+                                                ? "—"
+                                                : $"{"ABCD"[correct.ThuTu - 1]}. {Truncate(correct.NoiDung ?? "", 40)}";
+                                        }
+                                        <MudText Typo="Typo.body2" Color="Color.Success">@label</MudText>
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(context.CapDo)">
+                                            @CapDoLabel(context.CapDo)
+                                        </MudChip>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        }
+    </MudExpansionPanels>
+
+    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2 d-block">
+        Tổng: @_deThiList.Count đề thi
+    </MudText>
+}
+
+@code {
+    List<MonHocDto> _monHocList = [];
+    List<DeThiDto>  _deThiList  = [];
+    Guid _maMonHoc = Guid.Empty;
+    bool _loading  = false;
+
+    protected override async Task OnInitializedAsync()
+        => _monHocList = await MonHocService.GetAllAsync();
+
+    private async Task OnMonHocChanged(Guid maMonHoc)
+    {
+        _maMonHoc  = maMonHoc;
+        _deThiList = [];
+        await LoadDeThiAsync();
+    }
+
+    private async Task LoadDeThiAsync()
+    {
+        if (_maMonHoc == Guid.Empty) return;
+        _loading = true;
+        try   { _deThiList = await DeThiService.GetByMonHocAsync(_maMonHoc); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var parameters = new DialogParameters<TaoDeThiDialog>
+        {
+            { x => x.MaMonHoc, _maMonHoc }
+        };
+        var dialog = await DialogService.ShowAsync<TaoDeThiDialog>("Tạo đề thi mới", parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: SaveDeThiDto dto })
+        {
+            await DeThiService.SaveAsync(dto);
+            Snackbar.Add($"Đã tạo đề thi \"{dto.TenDeThi}\" với {dto.CauHois.Count} câu.", Severity.Success);
+            await LoadDeThiAsync();
+        }
+    }
+
+    private async Task DeleteAsync(Guid maDeThi, string tenDeThi)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            "Xác nhận xóa",
+            $"Xóa đề thi \"{tenDeThi}\"? Thao tác này không thể hoàn tác.",
+            yesText: "Xóa", cancelText: "Hủy");
+
+        if (confirmed == true)
+        {
+            await DeThiService.DeleteAsync(maDeThi);
+            Snackbar.Add("Đã xóa đề thi.", Severity.Success);
+            await LoadDeThiAsync();
+        }
+    }
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max] + "…";
+
+    private static Color CapDoColor(short cap) => cap switch
+    {
+        1 => Color.Success,
+        2 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private static string CapDoLabel(short cap) => cap switch
+    {
+        1 => "Dễ",
+        2 => "TB",
+        _ => "Khó"
+    };
+}
