@@ -133,6 +133,14 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
     private static string Normalize(string s)
         => System.Text.RegularExpressions.Regex.Replace(s.Trim(), @"\s+", " ");
 
+    public async Task UpdateAsync(UpdateCauHoiDto dto)
+    {
+        var answers = dto.CauTraLois
+            .Select(a => (a.MaCauTraLoi, a.NoiDung, a.LaDapAn))
+            .ToList();
+        await repo.UpdateAsync(dto.MaCauHoi, dto.NoiDung, dto.CapDo, answers);
+    }
+
     public async Task DeleteAsync(Guid id)
         => await repo.SoftDeleteAsync(id);
 
