@@ -23,18 +23,3 @@ public class CauTraLoiDto
     public bool LaDapAn { get; set; }
     public bool HoanVi { get; set; }
 }
-
-public class UpdateCauHoiDto
-{
-    public Guid MaCauHoi { get; set; }
-    public string NoiDung { get; set; } = "";
-    public short CapDo { get; set; }
-    public List<UpdateCauTraLoiDto> CauTraLois { get; set; } = [];
-}
-
-public class UpdateCauTraLoiDto
-{
-    public Guid MaCauTraLoi { get; set; }
-    public string NoiDung { get; set; } = "";
-    public bool LaDapAn { get; set; }
-}

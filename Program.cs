@@ -25,7 +25,6 @@ builder.Services.AddScoped<IKhoaRepository, KhoaRepository>();
 builder.Services.AddScoped<IMonHocRepository, MonHocRepository>();
 builder.Services.AddScoped<IPhanRepository, PhanRepository>();
 builder.Services.AddScoped<ICauHoiRepository, CauHoiRepository>();
-builder.Services.AddScoped<IDeThiRepository, DeThiRepository>();
 
 // ── Application Services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<KhoaService>();
@@ -33,7 +32,6 @@ builder.Services.AddScoped<MonHocService>();
 builder.Services.AddScoped<PhanService>();
 builder.Services.AddScoped<WordImportService>();
 builder.Services.AddScoped<CauHoiService>();
-builder.Services.AddScoped<DeThiService>();
 
 var app = builder.Build();
 
