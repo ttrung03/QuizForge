@@ -1,0 +1,1004 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject CauHoiService CauHoiService
+@inject DeThiService DeThiService
+@inject PhanService PhanService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog Style="max-width:860px">
+    <TitleContent>
+        <div class="d-flex align-center gap-2" style="width:100%">
+            <MudIcon Icon="@Icons.Material.Filled.Visibility" />
+            <MudText Typo="Typo.h6" Class="flex-grow-1">Xem trước đề thi</MudText>
+            <MudSwitch T="bool"
+                       @bind-Value="_showAnswers"
+                       Color="Color.Success"
+                       Label="Hiển thị đáp án"
+                       Class="mr-2" />
+            <MudTooltip Text="Hoán vị câu hỏi (xáo trộn thứ tự câu hỏi)">
+                <MudSwitch T="bool"
+                           Value="_shuffleQuestions"
+                           ValueChanged="OnShuffleQuestionsChanged"
+                           Color="Color.Secondary"
+                           Label="Hoán vị câu hỏi"
+                           Class="mr-2" />
+            </MudTooltip>
+            <MudTooltip Text="Hoán vị đáp án (xáo trộn thứ tự câu trả lời)">
+                <MudSwitch T="bool"
+                           Value="_shuffleAnswers"
+                           ValueChanged="OnShuffleAnswersChanged"
+                           Color="Color.Tertiary"
+                           Label="Hoán vị đáp án"
+                           Class="mr-2" />
+            </MudTooltip>
+            @if (DeThi.DaDuyet != true)
+            {
+                <MudTooltip Text="Phê duyệt và lưu thứ tự hoán vị hiện tại">
+                    <MudButton Variant="Variant.Filled" Color="Color.Success"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="DuyetAsync"
+                               Disabled="@_approving">
+                        @(_approving ? "Đang lưu…" : "Phê duyệt")
+                    </MudButton>
+                </MudTooltip>
+            }
+            else
+            {
+                <MudChip T="string" Color="Color.Success" Size="Size.Small"
+                         Icon="@Icons.Material.Filled.CheckCircle">
+                    Đã duyệt
+                </MudChip>
+            }
+        </div>
+    </TitleContent>
+
+    <DialogContent>
+        <div id="preview-dethi-content">
+            @* ── Header ── *@
+            <div class="text-center mb-4" style="border-bottom:2px solid #333; padding-bottom:12px">
+                <MudText Typo="Typo.subtitle2" Style="text-transform:uppercase; letter-spacing:1px">
+                    @TenMonHoc
+                </MudText>
+                <MudText Typo="Typo.h5" Style="font-weight:700; margin:4px 0">
+                    @DeThi.TenDeThi
+                </MudText>
+                <div class="d-flex justify-center gap-4 mt-1">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Ngày tạo: @DeThi.NgayTao.ToString("dd/MM/yyyy")
+                    </MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Số câu: @DeThi.SoCauHoi
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(DeThi.DaDuyet == true ? Color.Success : Color.Warning)">
+                        @(DeThi.DaDuyet == true ? "Đã duyệt" : "Chưa duyệt")
+                    </MudChip>
+                </div>
+            </div>
+
+            @* ── Thống kê nhanh ── *@
+            @{
+                var de  = DeThi.ChiTietDeThis.Count(c => c.CapDo == 1);
+                var tb  = DeThi.ChiTietDeThis.Count(c => c.CapDo == 2);
+                var kho = DeThi.ChiTietDeThis.Count(c => c.CapDo >= 3);
+            }
+            <MudPaper Elevation="0" Class="d-flex gap-4 justify-center pa-2 mb-4"
+                      Style="background:#f9f9f9; border-radius:8px">
+                <div class="text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Success">@de</MudText>
+                    <MudText Typo="Typo.caption">Dễ</MudText>
+                </div>
+                <MudDivider Vertical="true" FlexItem="true" />
+                <div class="text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Warning">@tb</MudText>
+                    <MudText Typo="Typo.caption">Trung bình</MudText>
+                </div>
+                <MudDivider Vertical="true" FlexItem="true" />
+                <div class="text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Error">@kho</MudText>
+                    <MudText Typo="Typo.caption">Khó</MudText>
+                </div>
+                <MudDivider Vertical="true" FlexItem="true" />
+                @foreach (var phanG in DeThi.ChiTietDeThis.GroupBy(c => c.TenPhan))
+                {
+                    <div class="text-center">
+                        <MudText Typo="Typo.h6">@phanG.Count()</MudText>
+                        <MudText Typo="Typo.caption">@phanG.Key</MudText>
+                    </div>
+                }
+            </MudPaper>
+
+            @* ── Danh sách câu hỏi ── *@
+            @{
+                int stt = 0;
+                var letters = "ABCD";
+                int totalItems = _displayItems.Count;
+                int itemIdx = 0;
+            }
+            @foreach (var cauHoi in _displayItems)
+            {
+                itemIdx++;
+
+                @if (cauHoi.LaCauNhom)
+                {
+                    @* ── Câu hỏi nhóm ── *@
+                    <div class="mb-2" style="page-break-inside:avoid">
+                        @if (_editingId == cauHoi.MaCauHoi)
+                        {
+                            @* ── Form chỉnh sửa câu cha ── *@
+                            <MudPaper Elevation="1" Class="pa-3 mb-2" Style="border:1px solid #5c6bc0; border-radius:6px; background:#f0f4ff">
+                                <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-2 d-block" Style="font-weight:600; text-transform:uppercase">
+                                    Chỉnh sửa đoạn văn nhóm
+                                </MudText>
+                                <MudTextField @bind-Value="_editNoiDung"
+                                              Label="Nội dung đoạn văn"
+                                              Variant="Variant.Outlined"
+                                              Lines="6"
+                                              Class="mb-2" />
+                                <div class="d-flex gap-2 mt-2">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Save"
+                                               OnClick="@(() => SaveParentEditAsync(cauHoi))"
+                                               Disabled="@_saving">
+                                        @(_saving ? "Đang lưu…" : "Lưu")
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                                               OnClick="CancelEdit">Hủy</MudButton>
+                                </div>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudPaper Elevation="0" Class="pa-3 mb-2"
+                                      Style="background:#f0f4ff; border-left:4px solid #5c6bc0; border-radius:4px">
+                                <div class="d-flex align-start justify-space-between">
+                                    <div style="flex:1">
+                                        <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight:600; text-transform:uppercase; letter-spacing:0.5px">
+                                            Câu hỏi nhóm (@cauHoi.CauHoiCons.Count câu)
+                                        </MudText>
+                                        <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-top:4px">
+                                            @cauHoi.NoiDung
+                                        </MudText>
+                                    </div>
+                                    <MudTooltip Text="Chỉnh sửa đoạn văn nhóm">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Size="Size.Small" Color="Color.Primary"
+                                                       OnClick="@(() => BeginParentEdit(cauHoi))" />
+                                    </MudTooltip>
+                                </div>
+                            </MudPaper>
+                        }
+
+                        @foreach (var con in cauHoi.CauHoiCons)
+                        {
+                            stt++;
+                            var conStt = stt;
+                            <div class="mb-3 pl-4" style="border-left:2px solid #c5cae9">
+                                @if (_editingId == con.MaCauHoi)
+                                {
+                                    @* ── Form chỉnh sửa câu con ── *@
+                                    <MudPaper Elevation="1" Class="pa-3 mb-1" Style="border:1px solid #1976d2; border-radius:6px">
+                                        <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-2 d-block">
+                                            Chỉnh sửa câu @conStt
+                                        </MudText>
+                                        <MudTextField @bind-Value="_editNoiDung"
+                                                      Label="Nội dung câu hỏi"
+                                                      Variant="Variant.Outlined"
+                                                      Lines="3"
+                                                      Class="mb-2" />
+                                        <MudSelect T="short" @bind-Value="_editCapDo"
+                                                   Label="Cấp độ"
+                                                   Variant="Variant.Outlined"
+                                                   Class="mb-3">
+                                            <MudSelectItem Value="@((short)1)">Dễ</MudSelectItem>
+                                            <MudSelectItem Value="@((short)2)">Trung bình</MudSelectItem>
+                                            <MudSelectItem Value="@((short)3)">Khó</MudSelectItem>
+                                        </MudSelect>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1 d-block">
+                                            Chọn đáp án đúng (radio) và sửa nội dung:
+                                        </MudText>
+                                        <MudRadioGroup T="int" @bind-Value="_editCorrectIdx">
+                                            @for (int ai = 0; ai < _editAnswers.Count; ai++)
+                                            {
+                                                var answer = _editAnswers[ai];
+                                                var label  = ai < letters.Length ? letters[ai].ToString() : $"{ai+1}";
+                                                var idx    = ai;
+                                                <div class="d-flex align-center gap-2 mb-2"
+                                                     style="@(_editCorrectIdx == idx ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
+                                                    <MudRadio T="int" Value="@idx" Color="Color.Success" Size="Size.Small" />
+                                                    <MudTextField Value="@answer.NoiDung"
+                                                                  ValueChanged="@((string v) => answer.NoiDung = v)"
+                                                                  Label="@($"Đáp án {label}")"
+                                                                  Variant="Variant.Outlined"
+                                                                  Margin="Margin.Dense"
+                                                                  Style="flex:1" />
+                                                </div>
+                                            }
+                                        </MudRadioGroup>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Save"
+                                                       OnClick="@(() => SaveEditAsync(con))"
+                                                       Disabled="@_saving">
+                                                @(_saving ? "Đang lưu…" : "Lưu")
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Text" Size="Size.Small"
+                                                       OnClick="CancelEdit">Hủy</MudButton>
+                                        </div>
+                                    </MudPaper>
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-start gap-2">
+                                        <MudText Typo="Typo.body1" Style="min-width:32px; font-weight:600">
+                                            @conStt.
+                                        </MudText>
+                                        <div style="flex:1">
+                                            <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
+                                                @con.NoiDung
+                                            </MudText>
+                                            <div class="pl-2">
+                                                @for (int i = 0; i < con.CauTraLois.Count; i++)
+                                                {
+                                                    var opt = con.CauTraLois[i];
+                                                    bool isCorrect = opt.LaDapAn;
+                                                    string letterLabel = i < letters.Length ? letters[i].ToString() : $"{i+1}";
+                                                    <div class="d-flex align-start gap-1 mb-1"
+                                                         style="@((_showAnswers && isCorrect) ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
+                                                        <MudText Typo="Typo.body2"
+                                                                 Style="@LetterStyle(isCorrect)"
+                                                                 Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                                            @letterLabel.
+                                                        </MudText>
+                                                        <MudText Typo="Typo.body2"
+                                                                 Style="white-space:pre-wrap"
+                                                                 Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                                            @opt.NoiDung
+                                                            @if (_showAnswers && isCorrect)
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                                         Size="Size.Small" Color="Color.Success"
+                                                                         Style="vertical-align:middle; margin-left:4px" />
+                                                            }
+                                                        </MudText>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(con.CapDo)"
+                                                 Style="min-width:36px">
+                                            @CapDoLabel(con.CapDo)
+                                        </MudChip>
+                                        <MudTooltip Text="Chỉnh sửa câu hỏi này">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                           Size="Size.Small" Color="Color.Primary"
+                                                           OnClick="@(() => BeginEdit(con))" />
+                                        </MudTooltip>
+                                        <MudTooltip Text="Xóa câu hỏi khỏi đề thi">
+                                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
+                                                           Size="Size.Small" Color="Color.Error"
+                                                           OnClick="@(() => RemoveSingleAsync(con))" />
+                                        </MudTooltip>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @* Nút xóa cả nhóm *@
+                        <div class="d-flex justify-end mt-1">
+                            <MudTooltip Text="Xóa cả nhóm câu hỏi này khỏi đề thi">
+                                <MudButton Variant="Variant.Text" Color="Color.Error"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.DeleteSweep"
+                                           OnClick="@(() => RemoveGroupAsync(cauHoi))">
+                                    Xóa nhóm
+                                </MudButton>
+                            </MudTooltip>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @* ── Câu hỏi đơn ── *@
+                    stt++;
+                    var curStt = stt;
+                    <div class="mb-4" style="page-break-inside:avoid">
+                        @if (_editingId == cauHoi.MaCauHoi)
+                        {
+                            @* ── Form chỉnh sửa câu đơn ── *@
+                            <MudPaper Elevation="1" Class="pa-3" Style="border:1px solid #1976d2; border-radius:6px">
+                                <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-2 d-block">
+                                    Chỉnh sửa câu @curStt
+                                </MudText>
+                                <MudTextField @bind-Value="_editNoiDung"
+                                              Label="Nội dung câu hỏi"
+                                              Variant="Variant.Outlined"
+                                              Lines="3"
+                                              Class="mb-2" />
+                                <MudSelect T="short" @bind-Value="_editCapDo"
+                                           Label="Cấp độ"
+                                           Variant="Variant.Outlined"
+                                           Class="mb-3">
+                                    <MudSelectItem Value="@((short)1)">Dễ</MudSelectItem>
+                                    <MudSelectItem Value="@((short)2)">Trung bình</MudSelectItem>
+                                    <MudSelectItem Value="@((short)3)">Khó</MudSelectItem>
+                                </MudSelect>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1 d-block">
+                                    Chọn đáp án đúng (radio) và sửa nội dung:
+                                </MudText>
+                                <MudRadioGroup T="int" @bind-Value="_editCorrectIdx">
+                                    @for (int ai = 0; ai < _editAnswers.Count; ai++)
+                                    {
+                                        var answer = _editAnswers[ai];
+                                        var label  = ai < letters.Length ? letters[ai].ToString() : $"{ai+1}";
+                                        var idx    = ai;
+                                        <div class="d-flex align-center gap-2 mb-2"
+                                             style="@(_editCorrectIdx == idx ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
+                                            <MudRadio T="int" Value="@idx" Color="Color.Success" Size="Size.Small" />
+                                            <MudTextField Value="@answer.NoiDung"
+                                                          ValueChanged="@((string v) => answer.NoiDung = v)"
+                                                          Label="@($"Đáp án {label}")"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense"
+                                                          Style="flex:1" />
+                                        </div>
+                                    }
+                                </MudRadioGroup>
+                                <div class="d-flex gap-2 mt-2">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Save"
+                                               OnClick="@(() => SaveEditAsync(cauHoi))"
+                                               Disabled="@_saving">
+                                        @(_saving ? "Đang lưu…" : "Lưu")
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                                               OnClick="CancelEdit">Hủy</MudButton>
+                                </div>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-start gap-2">
+                                <MudText Typo="Typo.body1" Style="min-width:32px; font-weight:600">
+                                    @curStt.
+                                </MudText>
+                                <div style="flex:1">
+                                    <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
+                                        @cauHoi.NoiDung
+                                    </MudText>
+                                    <div class="pl-2">
+                                        @for (int i = 0; i < cauHoi.CauTraLois.Count; i++)
+                                        {
+                                            var opt = cauHoi.CauTraLois[i];
+                                            bool isCorrect = opt.LaDapAn;
+                                            string letterLabel = i < letters.Length ? letters[i].ToString() : $"{i+1}";
+                                            <div class="d-flex align-start gap-1 mb-1"
+                                                 style="@((_showAnswers && isCorrect) ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
+                                                <MudText Typo="Typo.body2"
+                                                         Style="@LetterStyle(isCorrect)"
+                                                         Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                                    @letterLabel.
+                                                </MudText>
+                                                <MudText Typo="Typo.body2"
+                                                         Style="white-space:pre-wrap"
+                                                         Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                                    @opt.NoiDung
+                                                    @if (_showAnswers && isCorrect)
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                                 Size="Size.Small" Color="Color.Success"
+                                                                 Style="vertical-align:middle; margin-left:4px" />
+                                                    }
+                                                </MudText>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <MudChip T="string" Size="Size.Small" Color="@CapDoColor(cauHoi.CapDo)"
+                                         Style="min-width:36px">
+                                    @CapDoLabel(cauHoi.CapDo)
+                                </MudChip>
+                                <MudTooltip Text="Chỉnh sửa câu hỏi này">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small" Color="Color.Primary"
+                                                   OnClick="@(() => BeginEdit(cauHoi))" />
+                                </MudTooltip>
+                                <MudTooltip Text="Xóa câu hỏi khỏi đề thi">
+                                    <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
+                                                   Size="Size.Small" Color="Color.Error"
+                                                   OnClick="@(() => RemoveSingleAsync(cauHoi))" />
+                                </MudTooltip>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (itemIdx < totalItems)
+                {
+                    <MudDivider Class="mb-3" Style="border-color:#eee" />
+                }
+            }
+        </div>
+
+        @* ── Panel thêm câu hỏi ── *@
+        <MudDivider Class="my-3" />
+        <div>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.AddCircleOutline"
+                       Size="Size.Small"
+                       OnClick="ToggleAddPanel">
+                @(_showAddPanel ? "Ẩn panel thêm câu hỏi" : "Thêm câu hỏi vào đề")
+            </MudButton>
+
+            @if (_showAddPanel)
+            {
+                <MudPaper Elevation="1" Class="pa-3 mt-2" Style="border:1px solid #1976d2; border-radius:6px">
+                    <MudSelect T="Guid"
+                               Value="_addPhanSelected"
+                               ValueChanged="OnAddPhanChanged"
+                               Label="Chọn Phần"
+                               Variant="Variant.Outlined"
+                               Class="mb-2">
+                        @foreach (var p in _phanList)
+                        {
+                            <MudSelectItem Value="@p.MaPhan">@p.TenPhan</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (_loadingAddQuestions)
+                    {
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                    }
+                    else if (_addPhanSelected != Guid.Empty && _addQuestionsInPhan.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">Không có câu hỏi mới để thêm.</MudAlert>
+                    }
+                    else if (_addQuestionsInPhan.Count > 0)
+                    {
+                        <div style="max-height:300px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:4px" class="mb-2">
+                            @{
+                                var addSingles = _addQuestionsInPhan.Where(q => !q.LaCauNhom).ToList();
+                                var addGroups  = _addQuestionsInPhan.Where(q =>  q.LaCauNhom).ToList();
+                            }
+                            @if (addSingles.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary px-3 pt-2 d-block">
+                                    CÂU HỎI ĐƠN (@addSingles.Count)
+                                </MudText>
+                                @foreach (var q in addSingles)
+                                {
+                                    <div class="d-flex align-center px-3 py-1" style="border-bottom:1px solid #f5f5f5">
+                                        <MudCheckBox T="bool"
+                                                     Value="@_addSelected.ContainsKey(q.MaCauHoi)"
+                                                     ValueChanged="@((bool v) => ToggleAddSelect(v, q))"
+                                                     Color="Color.Primary" Dense="true" />
+                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(q.CapDo)" Class="mr-2">
+                                            @CapDoLabel(q.CapDo)
+                                        </MudChip>
+                                        <MudText Typo="Typo.body2" Style="white-space:normal; flex:1">
+                                            <b>#@q.MaSoCauHoi</b> @Truncate(q.NoiDung ?? "", 100)
+                                        </MudText>
+                                    </div>
+                                }
+                            }
+                            @if (addGroups.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary px-3 pt-2 d-block">
+                                    CÂU HỎI NHÓM (@addGroups.Count nhóm)
+                                </MudText>
+                                @foreach (var grp in addGroups)
+                                {
+                                    <div style="border-bottom:1px solid #f0f0f0">
+                                        <div class="d-flex align-center px-3 py-1" style="background:#fafafa">
+                                            <MudCheckBox T="bool"
+                                                         Value="@(grp.CauHoiCons.Count > 0 && grp.CauHoiCons.All(c => _addSelected.ContainsKey(c.MaCauHoi)))"
+                                                         ValueChanged="@((bool v) => ToggleAddGroup(v, grp))"
+                                                         Color="Color.Info" Dense="true" />
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mr-1">
+                                                @grp.SoCauHoiCon câu con
+                                            </MudChip>
+                                            <MudText Typo="Typo.body2" Style="white-space:normal; flex:1">
+                                                <b>#@grp.MaSoCauHoi</b> @Truncate(grp.NoiDung ?? "", 80)
+                                            </MudText>
+                                        </div>
+                                        @foreach (var sub in grp.CauHoiCons)
+                                        {
+                                            <div class="d-flex align-center pl-6 pr-3 py-1" style="border-top:1px solid #f5f5f5">
+                                                <MudCheckBox T="bool"
+                                                             Value="@_addSelected.ContainsKey(sub.MaCauHoi)"
+                                                             ValueChanged="@((bool v) => ToggleAddSelect(v, sub))"
+                                                             Color="Color.Primary" Dense="true" />
+                                                <MudChip T="string" Size="Size.Small" Color="@CapDoColor(sub.CapDo)" Class="mr-2">
+                                                    @CapDoLabel(sub.CapDo)
+                                                </MudChip>
+                                                <MudText Typo="Typo.body2" Style="white-space:normal; flex:1">
+                                                    @Truncate(sub.NoiDung ?? "", 100)
+                                                </MudText>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <div class="d-flex align-center gap-2">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Disabled="@(_addSelected.Count == 0 || _saving)"
+                                       OnClick="ConfirmAddAsync">
+                                Thêm @(_addSelected.Count > 0 ? $"{_addSelected.Count} câu" : "")
+                            </MudButton>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Đã chọn: @_addSelected.Count câu
+                            </MudText>
+                        </div>
+                    }
+                </MudPaper>
+            }
+        </div>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="@(() => MudDialog.Cancel())">Đóng</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public DeThiDto DeThi { get; set; } = null!;
+    [Parameter] public string TenMonHoc { get; set; } = "";
+    [Parameter] public Guid MaMonHoc { get; set; }
+
+    bool _showAnswers      = false;
+    bool _shuffleQuestions = false;
+    bool _shuffleAnswers   = false;
+
+    List<ChiTietDeThiDto> _displayItems = [];
+
+    // ── Edit state ────────────────────────────────────────────────────────────
+    Guid?  _editingId      = null;
+    string _editNoiDung    = "";
+    short  _editCapDo      = 1;
+    int    _editCorrectIdx = 0;
+    bool   _saving         = false;
+    bool   _approving      = false;
+
+    // ── Add/Remove state ─────────────────────────────────────────────────────
+    bool   _showAddPanel        = false;
+    bool   _loadingAddQuestions = false;
+    Guid   _addPhanSelected     = Guid.Empty;
+    List<PhanDto>   _phanList           = [];
+    List<CauHoiDto> _addQuestionsInPhan = [];
+    Dictionary<Guid, SelectedCauHoiDto> _addSelected = [];
+
+    record EditAnswerModel(Guid MaCauTraLoi) { public string? NoiDung { get; set; } }
+    List<EditAnswerModel> _editAnswers = [];
+
+    private void BeginParentEdit(ChiTietDeThiDto cauHoi)
+    {
+        _editingId   = cauHoi.MaCauHoi;
+        _editNoiDung = cauHoi.NoiDung ?? "";
+        _editAnswers = [];
+    }
+
+    private async Task SaveParentEditAsync(ChiTietDeThiDto cauHoi)
+    {
+        if (string.IsNullOrWhiteSpace(_editNoiDung)) return;
+
+        _saving = true;
+        try
+        {
+            var dto = new UpdateCauHoiDto
+            {
+                MaCauHoi   = cauHoi.MaCauHoi,
+                NoiDung    = _editNoiDung.Trim(),
+                CapDo      = cauHoi.CapDo,
+                CauTraLois = []
+            };
+
+            await CauHoiService.UpdateAsync(dto);
+
+            cauHoi.NoiDung = dto.NoiDung;
+            UpdateOriginal(cauHoi.MaCauHoi, dto);
+
+            _editingId = null;
+            Snackbar.Add("Đã lưu thay đổi.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void BeginEdit(ChiTietDeThiDto cauHoi)
+    {
+        _editingId      = cauHoi.MaCauHoi;
+        _editNoiDung    = cauHoi.NoiDung ?? "";
+        _editCapDo      = cauHoi.CapDo;
+        _editAnswers    = cauHoi.CauTraLois
+            .Select(a => new EditAnswerModel(a.MaCauTraLoi) { NoiDung = a.NoiDung })
+            .ToList();
+        _editCorrectIdx = cauHoi.CauTraLois.FindIndex(a => a.LaDapAn);
+        if (_editCorrectIdx < 0) _editCorrectIdx = 0;
+    }
+
+    private void CancelEdit() => _editingId = null;
+
+    private async Task SaveEditAsync(ChiTietDeThiDto cauHoi)
+    {
+        if (string.IsNullOrWhiteSpace(_editNoiDung)) return;
+
+        _saving = true;
+        try
+        {
+            var dto = new UpdateCauHoiDto
+            {
+                MaCauHoi   = cauHoi.MaCauHoi,
+                NoiDung    = _editNoiDung.Trim(),
+                CapDo      = _editCapDo,
+                CauTraLois = _editAnswers.Select((a, i) => new UpdateCauTraLoiDto
+                {
+                    MaCauTraLoi = a.MaCauTraLoi,
+                    NoiDung     = a.NoiDung?.Trim() ?? "",
+                    LaDapAn     = i == _editCorrectIdx
+                }).ToList()
+            };
+
+            await CauHoiService.UpdateAsync(dto);
+
+            // Cập nhật local display
+            cauHoi.NoiDung = dto.NoiDung;
+            cauHoi.CapDo   = dto.CapDo;
+            for (int i = 0; i < cauHoi.CauTraLois.Count && i < dto.CauTraLois.Count; i++)
+            {
+                cauHoi.CauTraLois[i].NoiDung = dto.CauTraLois[i].NoiDung;
+                cauHoi.CauTraLois[i].LaDapAn = dto.CauTraLois[i].LaDapAn;
+            }
+
+            // Cập nhật dữ liệu gốc (DeThi.ChiTietDeThis) để reload không mất thay đổi
+            UpdateOriginal(cauHoi.MaCauHoi, dto);
+
+            _editingId = null;
+            Snackbar.Add("Đã lưu thay đổi.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void UpdateOriginal(Guid maCauHoi, UpdateCauHoiDto dto)
+    {
+        // Tìm trong câu đơn
+        var found = DeThi.ChiTietDeThis.FirstOrDefault(c => c.MaCauHoi == maCauHoi);
+        // Hoặc trong câu con của nhóm
+        found ??= DeThi.ChiTietDeThis
+            .SelectMany(c => c.CauHoiCons)
+            .FirstOrDefault(c => c.MaCauHoi == maCauHoi);
+
+        if (found is null) return;
+        found.NoiDung = dto.NoiDung;
+        found.CapDo   = dto.CapDo;
+        for (int i = 0; i < found.CauTraLois.Count && i < dto.CauTraLois.Count; i++)
+        {
+            found.CauTraLois[i].NoiDung = dto.CauTraLois[i].NoiDung;
+            found.CauTraLois[i].LaDapAn = dto.CauTraLois[i].LaDapAn;
+        }
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        _phanList = await PhanService.GetAllByMonHocAsync(MaMonHoc);
+    }
+
+    // ── Phê duyệt ─────────────────────────────────────────────────────────────
+    private async Task DuyetAsync()
+    {
+        bool? ok = await DialogService.ShowMessageBoxAsync(
+            "Xác nhận phê duyệt",
+            _shuffleQuestions || _shuffleAnswers
+                ? "Phê duyệt đề thi và lưu thứ tự hoán vị hiện tại?\nThứ tự câu hỏi và đáp án sẽ được lưu vĩnh viễn."
+                : "Phê duyệt đề thi này?",
+            yesText: "Phê duyệt", cancelText: "Hủy");
+        if (ok != true) return;
+
+        _approving = true;
+        try
+        {
+            // Xây danh sách ThuTu mới cho ChiTietDeThi
+            var cauHoiOrders = new List<(Guid, int)>();
+            int thuTu = 1;
+            foreach (var item in _displayItems)
+            {
+                if (item.LaCauNhom)
+                    foreach (var con in item.CauHoiCons)
+                        cauHoiOrders.Add((con.MaCauHoi, thuTu++));
+                else
+                    cauHoiOrders.Add((item.MaCauHoi, thuTu++));
+            }
+
+            // Xây danh sách ThuTu mới cho CauTraLoi (chỉ khi hoán vị đáp án)
+            var cauTraLoiOrders = new List<(Guid, int)>();
+            if (_shuffleAnswers)
+            {
+                foreach (var item in _displayItems)
+                {
+                    var leaves = item.LaCauNhom ? item.CauHoiCons : [item];
+                    foreach (var ch in leaves)
+                        for (int i = 0; i < ch.CauTraLois.Count; i++)
+                            cauTraLoiOrders.Add((ch.CauTraLois[i].MaCauTraLoi, i + 1));
+                }
+            }
+
+            await DeThiService.DuyetVoiHoanViAsync(DeThi.MaDeThi, cauHoiOrders, cauTraLoiOrders);
+
+            DeThi.DaDuyet = true;
+            Snackbar.Add("Đã phê duyệt và lưu thứ tự hoán vị.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _approving = false; }
+    }
+
+    // ── Remove ────────────────────────────────────────────────────────────────
+    private async Task RemoveSingleAsync(ChiTietDeThiDto cauHoi)
+    {
+        bool? ok = await DialogService.ShowMessageBoxAsync(
+            "Xác nhận xóa",
+            "Xóa câu hỏi này khỏi đề thi?",
+            yesText: "Xóa", cancelText: "Hủy");
+        if (ok != true) return;
+
+        await DeThiService.RemoveCauHoisAsync(DeThi.MaDeThi, [cauHoi.MaCauHoi]);
+        DeThi.ChiTietDeThis.RemoveAll(c => c.MaCauHoi == cauHoi.MaCauHoi);
+        // Nếu là câu con, xóa khỏi CauHoiCons của nhóm cha
+        foreach (var nhom in DeThi.ChiTietDeThis)
+            nhom.CauHoiCons.RemoveAll(c => c.MaCauHoi == cauHoi.MaCauHoi);
+        RebuildDisplay();
+        Snackbar.Add("Đã xóa câu hỏi khỏi đề thi.", Severity.Success);
+    }
+
+    private async Task RemoveGroupAsync(ChiTietDeThiDto nhom)
+    {
+        bool? ok = await DialogService.ShowMessageBoxAsync(
+            "Xác nhận xóa nhóm",
+            $"Xóa cả nhóm ({nhom.CauHoiCons.Count} câu con) khỏi đề thi?",
+            yesText: "Xóa", cancelText: "Hủy");
+        if (ok != true) return;
+
+        var ids = nhom.CauHoiCons.Select(c => c.MaCauHoi).ToList();
+        await DeThiService.RemoveCauHoisAsync(DeThi.MaDeThi, ids);
+        foreach (var id in ids)
+            DeThi.ChiTietDeThis.RemoveAll(c => c.MaCauHoi == id);
+        RebuildDisplay();
+        Snackbar.Add("Đã xóa nhóm câu hỏi khỏi đề thi.", Severity.Success);
+    }
+
+    // ── Add ───────────────────────────────────────────────────────────────────
+    private void ToggleAddPanel()
+    {
+        _showAddPanel = !_showAddPanel;
+        if (!_showAddPanel)
+        {
+            _addPhanSelected     = Guid.Empty;
+            _addQuestionsInPhan  = [];
+            _addSelected         = [];
+        }
+    }
+
+    private async Task OnAddPhanChanged(Guid maPhan)
+    {
+        _addPhanSelected    = maPhan;
+        _addQuestionsInPhan = [];
+        _addSelected        = [];
+        if (maPhan == Guid.Empty) return;
+
+        _loadingAddQuestions = true;
+        try
+        {
+            var all = await CauHoiService.GetByPhanAsync(maPhan);
+            // Lấy tập MaCauHoi đã có trong đề
+            var inExam = DeThi.ChiTietDeThis
+                .Select(c => c.MaCauHoi)
+                .Concat(DeThi.ChiTietDeThis.SelectMany(c => c.CauHoiCons.Select(x => x.MaCauHoi)))
+                .ToHashSet();
+            // Chỉ giữ những câu chưa có trong đề
+            _addQuestionsInPhan = [];
+            foreach (var q in all)
+            {
+                if (q.LaCauNhom)
+                {
+                    var available = q.CauHoiCons.Where(c => !inExam.Contains(c.MaCauHoi)).ToList();
+                    if (available.Count == 0) continue;
+                    _addQuestionsInPhan.Add(new CauHoiDto
+                    {
+                        MaCauHoi    = q.MaCauHoi,
+                        MaPhan      = q.MaPhan,
+                        MaSoCauHoi  = q.MaSoCauHoi,
+                        NoiDung     = q.NoiDung,
+                        HoanVi      = q.HoanVi,
+                        CapDo       = q.CapDo,
+                        SoCauHoiCon = available.Count,
+                        CauHoiCons  = available,
+                        CauTraLois  = []
+                    });
+                }
+                else if (!inExam.Contains(q.MaCauHoi))
+                {
+                    _addQuestionsInPhan.Add(q);
+                }
+            }
+        }
+        finally { _loadingAddQuestions = false; }
+    }
+
+    private void ToggleAddSelect(bool value, CauHoiDto q)
+    {
+        if (value) _addSelected[q.MaCauHoi] = new SelectedCauHoiDto { MaCauHoi = q.MaCauHoi, MaPhan = q.MaPhan };
+        else       _addSelected.Remove(q.MaCauHoi);
+    }
+
+    private void ToggleAddGroup(bool value, CauHoiDto grp)
+    {
+        foreach (var sub in grp.CauHoiCons)
+            ToggleAddSelect(value, sub);
+    }
+
+    private async Task ConfirmAddAsync()
+    {
+        if (_addSelected.Count == 0) return;
+        _saving = true;
+        try
+        {
+            var list = _addSelected.Values.ToList();
+            await DeThiService.AddCauHoisAsync(DeThi.MaDeThi, list);
+
+            // Reload dữ liệu đề thi để hiển thị đúng
+            var updated = await DeThiService.GetByMonHocAsync(DeThi.MaMonHoc);
+            var fresh   = updated.FirstOrDefault(d => d.MaDeThi == DeThi.MaDeThi);
+            if (fresh is not null)
+            {
+                DeThi.ChiTietDeThis = fresh.ChiTietDeThis;
+            }
+
+            _addSelected        = [];
+            _addQuestionsInPhan = [];
+            _addPhanSelected    = Guid.Empty;
+            _showAddPanel       = false;
+            RebuildDisplay();
+            Snackbar.Add($"Đã thêm {list.Count} câu hỏi vào đề thi.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    // ── Shuffle ───────────────────────────────────────────────────────────────
+    private static readonly Random _rng = new();
+
+    protected override void OnParametersSet()
+    {
+        RebuildDisplay();
+    }
+
+    private void RebuildDisplay()
+    {
+        var items = DeThi.ChiTietDeThis.Select(DeepCopy).ToList();
+
+        if (_shuffleAnswers)
+        {
+            foreach (var ch in items)
+            {
+                ch.CauTraLois = Shuffle(ch.CauTraLois);
+                foreach (var con in ch.CauHoiCons)
+                    con.CauTraLois = Shuffle(con.CauTraLois);
+            }
+        }
+
+        _displayItems = _shuffleQuestions ? Shuffle(items) : items;
+    }
+
+    private void OnShuffleQuestionsChanged(bool value)
+    {
+        _shuffleQuestions = value;
+        RebuildDisplay();
+    }
+
+    private void OnShuffleAnswersChanged(bool value)
+    {
+        _shuffleAnswers = value;
+        RebuildDisplay();
+    }
+
+    private static List<T> Shuffle<T>(List<T> list)
+    {
+        var result = list.ToList();
+        for (int i = result.Count - 1; i > 0; i--)
+        {
+            int j = _rng.Next(i + 1);
+            (result[i], result[j]) = (result[j], result[i]);
+        }
+        return result;
+    }
+
+    private static ChiTietDeThiDto DeepCopy(ChiTietDeThiDto src) => new()
+    {
+        MaCauHoi   = src.MaCauHoi,
+        MaPhan     = src.MaPhan,
+        TenPhan    = src.TenPhan,
+        ThuTu      = src.ThuTu,
+        MaSoCauHoi = src.MaSoCauHoi,
+        NoiDung    = src.NoiDung,
+        CapDo      = src.CapDo,
+        LaCauNhom  = src.LaCauNhom,
+        CauTraLois = src.CauTraLois.Select(a => new CauTraLoiDto
+        {
+            MaCauTraLoi = a.MaCauTraLoi,
+            NoiDung     = a.NoiDung,
+            ThuTu       = a.ThuTu,
+            LaDapAn     = a.LaDapAn,
+            HoanVi      = a.HoanVi
+        }).ToList(),
+        CauHoiCons = src.CauHoiCons.Select(c => new ChiTietDeThiDto
+        {
+            MaCauHoi   = c.MaCauHoi,
+            MaPhan     = c.MaPhan,
+            TenPhan    = c.TenPhan,
+            ThuTu      = c.ThuTu,
+            MaSoCauHoi = c.MaSoCauHoi,
+            NoiDung    = c.NoiDung,
+            CapDo      = c.CapDo,
+            LaCauNhom  = c.LaCauNhom,
+            CauTraLois = c.CauTraLois.Select(a => new CauTraLoiDto
+            {
+                MaCauTraLoi = a.MaCauTraLoi,
+                NoiDung     = a.NoiDung,
+                ThuTu       = a.ThuTu,
+                LaDapAn     = a.LaDapAn,
+                HoanVi      = a.HoanVi
+            }).ToList(),
+            CauHoiCons = []
+        }).ToList()
+    };
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max] + "…";
+
+    private string LetterStyle(bool isCorrect)
+        => _showAnswers && isCorrect
+            ? "min-width:20px; font-weight:700"
+            : "min-width:20px; font-weight:400";
+
+    private static Color CapDoColor(short cap) => cap switch
+    {
+        1 => Color.Success,
+        2 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private static string CapDoLabel(short cap) => cap switch
+    {
+        1 => "Dễ",
+        2 => "TB",
+        _ => "Khó"
+    };
+}

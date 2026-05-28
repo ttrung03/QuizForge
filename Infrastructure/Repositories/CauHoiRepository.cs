@@ -57,6 +57,39 @@ public class CauHoiRepository(QuestionBankDbContext context) : ICauHoiRepository
     private static string Normalize(string s)
         => System.Text.RegularExpressions.Regex.Replace(s.Trim(), @"\s+", " ");
 
+    public async Task UpdateAsync(Guid maCauHoi, string noiDung, short capDo, List<(Guid id, string noiDung, bool laDapAn)> answers)
+    {
+        var cauHoi = await context.CauHois
+            .Include(c => c.CauTraLois)
+            .FirstOrDefaultAsync(c => c.MaCauHoi == maCauHoi);
+        if (cauHoi is null) return;
+
+        cauHoi.NoiDung  = noiDung;
+        cauHoi.CapDo    = capDo;
+        cauHoi.NgaySua  = DateTime.Now;
+
+        foreach (var (id, nd, laDapAn) in answers)
+        {
+            var a = cauHoi.CauTraLois.FirstOrDefault(x => x.MaCauTraLoi == id);
+            if (a is null) continue;
+            a.NoiDung = nd;
+            a.LaDapAn = laDapAn;
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    public async Task UpdateCauTraLoiThuTuAsync(List<(Guid maCauTraLoi, int thuTu)> orders)
+    {
+        var lookup = orders.ToDictionary(o => o.maCauTraLoi, o => o.thuTu);
+        var rows = await context.CauTraLois
+            .Where(a => lookup.Keys.Contains(a.MaCauTraLoi))
+            .ToListAsync();
+        foreach (var row in rows)
+            row.ThuTu = lookup[row.MaCauTraLoi];
+        await context.SaveChangesAsync();
+    }
+
     public async Task SoftDeleteAsync(Guid id)
     {
         var cauHoi = await context.CauHois
