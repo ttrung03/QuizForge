@@ -21,6 +21,8 @@ public class ChiTietDeThiDto
     public int MaSoCauHoi { get; set; }
     public string? NoiDung { get; set; }
     public short CapDo { get; set; }
+    public bool LaCauNhom { get; set; }
+    public List<ChiTietDeThiDto> CauHoiCons { get; set; } = [];
     public List<CauTraLoiDto> CauTraLois { get; set; } = [];
 }
 
