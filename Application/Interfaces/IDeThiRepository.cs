@@ -12,4 +12,5 @@ public interface IDeThiRepository
     Task RemoveCauHoisAsync(Guid maDeThi, List<Guid> maCauHois);
     Task AddCauHoisAsync(Guid maDeThi, List<(Guid maCauHoi, Guid maPhan)> cauHois);
     Task UpdateThuTuAsync(Guid maDeThi, List<(Guid maCauHoi, int thuTu)> orders);
+    Task<int> GetNextMaDeAsync(Guid maMonHoc);
 }

@@ -14,13 +14,15 @@ public class DeThiService(IDeThiRepository repo, ICauHoiRepository cauHoiRepo)
 
     public async Task SaveAsync(SaveDeThiDto dto)
     {
+        var maDe = await repo.GetNextMaDeAsync(dto.MaMonHoc);
         var deThi = new DeThi
         {
             MaDeThi  = Guid.NewGuid(),
             MaMonHoc = dto.MaMonHoc,
             TenDeThi = dto.TenDeThi.Trim(),
             NgayTao  = DateTime.Now,
-            DaDuyet  = false
+            DaDuyet  = false,
+            MaDe     = maDe
         };
 
         var chiTiets = dto.CauHois
@@ -117,6 +119,7 @@ public class DeThiService(IDeThiRepository repo, ICauHoiRepository cauHoiRepo)
             TenDeThi      = d.TenDeThi,
             NgayTao       = d.NgayTao,
             DaDuyet       = d.DaDuyet,
+            MaDe          = d.MaDe,
             ChiTietDeThis = mappedSingles.Concat(groups).OrderBy(x => x.ThuTu).ToList()
         };
     }

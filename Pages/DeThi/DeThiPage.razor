@@ -76,6 +76,14 @@ else
                             <b>@dt.TenDeThi</b>
                         </MudText>
 
+                        @if (dt.MaDe.HasValue)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                                     Icon="@Icons.Material.Filled.Tag">
+                                Mã đề: @dt.MaDe.Value.ToString("D3")
+                            </MudChip>
+                        }
+
                         <MudChip T="string" Size="Size.Small" Color="Color.Primary">
                             @dt.SoCauHoi câu
                         </MudChip>

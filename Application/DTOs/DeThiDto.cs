@@ -7,6 +7,7 @@ public class DeThiDto
     public string TenDeThi { get; set; } = "";
     public DateTime NgayTao { get; set; }
     public bool? DaDuyet { get; set; }
+    public int? MaDe { get; set; }
     public List<ChiTietDeThiDto> ChiTietDeThis { get; set; } = [];
 
     public int SoCauHoi => ChiTietDeThis.Count;

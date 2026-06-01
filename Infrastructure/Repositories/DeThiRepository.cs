@@ -97,4 +97,13 @@ public class DeThiRepository(QuestionBankDbContext context) : IDeThiRepository
         context.ChiTietDeThis.AddRange(chiTiets);
         await context.SaveChangesAsync();
     }
+
+    public async Task<int> GetNextMaDeAsync(Guid maMonHoc)
+    {
+        var max = await context.DeThis
+            .Where(d => d.MaMonHoc == maMonHoc && d.MaDe != null)
+            .Select(d => (int?)d.MaDe)
+            .MaxAsync();
+        return (max ?? 100) + 1;
+    }
 }
