@@ -100,6 +100,8 @@
         if (!result!.Canceled) await LoadData();
     }
 
+
+// xóa cứng môn học để demo
     async Task DeleteMonHoc(MonHocDto monHoc)
     {
         bool? confirmed = await DialogService.ShowMessageBoxAsync(
@@ -109,7 +111,7 @@
 
         if (confirmed == true)
         {
-            await MonHocService.DeleteAsync(monHoc.MaMonHoc);
+            await MonHocService.DeleteAllAsync(monHoc.MaMonHoc);
             Snackbar.Add("Đã xóa môn học thành công", Severity.Success);
             await LoadData();
         }
