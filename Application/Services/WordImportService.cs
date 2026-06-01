@@ -7,12 +7,15 @@ namespace QuestionBank.Web.Application.Services;
 
 /// <summary>
 /// Parse file .docx theo định dạng chuẩn HUTECH (Số 73/HD-KT).
-/// Hỗ trợ câu hỏi đơn và câu hỏi nhóm.
+/// Hỗ trợ câu hỏi đơn, câu hỏi nhóm, và media (hình ảnh, âm thanh) qua marker
+/// [&lt;img&gt;filename.png&lt;/img&gt;] và [&lt;audio&gt;filename.mp3&lt;/audio&gt;].
 /// </summary>
 public class WordImportService
 {
     private static readonly Regex CloPrefix    = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
     private static readonly Regex AnswerLine   = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex ImgMarker    = new(@"\[<img>([^<]+)</img>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex AudioMarker  = new(@"\[<audio>([^<]+)</audio>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 //    private static readonly Regex CapDoPrefix  = new(@"^\(<(\d+)>\)", RegexOptions.Compiled);
     private const string EndMarker = "[<br>]";
 
@@ -53,7 +56,11 @@ public class WordImportService
             {
                 if (text == "[<egc>]")
                 {
-                    currentGroup!.NoiDung = string.Join("\n", passageLines).Trim();
+                    var rawPassage = string.Join("\n", passageLines).Trim();
+                    var (cleanPassage, anhPassage, amThanhPassage) = ExtractMedia(rawPassage);
+                    currentGroup!.NoiDung      = cleanPassage;
+                    currentGroup.AnhFiles      = anhPassage;
+                    currentGroup.AmThanhFiles  = amThanhPassage;
                     passageLines.Clear();
                     state = ParseState.CollectingSubQuestions;
                 }
@@ -88,11 +95,15 @@ public class WordImportService
                 else if (IsCloLine(text))
                 {
                     // (<n>) tại đây là chỉ số câu con trong nhóm, KHÔNG phải cấp độ
+                    var rawSub = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim();
+                    var (cleanSub, anhSub, amThanhSub) = ExtractMedia(rawSub);
                     currentSub = new ImportCauHoiDto
                     {
-                        CloText = ExtractClo(text),
-                        CapDo   = null,
-                        NoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim()
+                        CloText      = ExtractClo(text),
+                        CapDo        = null,
+                        NoiDung      = cleanSub,
+                        AnhFiles     = anhSub,
+                        AmThanhFiles = amThanhSub
                     };
                 }
                 else
@@ -145,11 +156,15 @@ public class WordImportService
 
             if (IsCloLine(text))
             {
+                var rawNoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim();
+                var (cleanNoiDung, anh, amThanh) = ExtractMedia(rawNoiDung);
                 current = new ImportCauHoiDto
                 {
-                    CloText = ExtractClo(text),
-                   // CapDo   = ExtractCapDo(text),
-                    NoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim()
+                    CloText      = ExtractClo(text),
+                   // CapDo      = ExtractCapDo(text),
+                    NoiDung      = cleanNoiDung,
+                    AnhFiles     = anh,
+                    AmThanhFiles = amThanh
                 };
                 continue;
             }
@@ -187,6 +202,15 @@ public class WordImportService
         var w = ValidateQuestion(sub, paraIndex);
         if (w is null) group.CauHoiCons.Add(sub);
         else warnings.Add(w);
+    }
+
+    /// <summary>Tách marker [&lt;img&gt;] và [&lt;audio&gt;] ra khỏi text, trả về text sạch và hai danh sách tên file.</summary>
+    private static (string CleanText, List<string> AnhFiles, List<string> AmThanhFiles) ExtractMedia(string text)
+    {
+        var anhFiles     = ImgMarker.Matches(text).Select(m => m.Groups[1].Value.Trim()).ToList();
+        var amThanhFiles = AudioMarker.Matches(text).Select(m => m.Groups[1].Value.Trim()).ToList();
+        var clean = ImgMarker.Replace(AudioMarker.Replace(text, ""), "").Trim();
+        return (clean, anhFiles, amThanhFiles);
     }
 
     private static string GetParagraphText(Paragraph para)

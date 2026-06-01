@@ -45,7 +45,7 @@
             }
         </MudSelect>
     </MudItem>
-    <MudItem xs="12" sm="2" Class="d-flex align-end">
+    <MudItem xs="12" sm="2" Class="d-flex align-end gap-2">
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Upload"
@@ -53,6 +53,13 @@
                    OnClick="OpenImportDialog"
                    FullWidth="true">
             Import từ Word
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.PermMedia"
+                   OnClick="OpenMediaDialog"
+                   Title="Quản lý hình ảnh và âm thanh">
+            Media
         </MudButton>
     </MudItem>
 </MudGrid>
@@ -95,6 +102,7 @@ else
                         <MudText Typo="Typo.body2" Style="white-space:normal">
                             @Truncate(context.Item.NoiDung ?? "", 120)
                         </MudText>
+                        @RenderMedia(context.Item.Files)
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="Đáp án đúng" Style="width:200px">
@@ -149,6 +157,14 @@ else
                             <MudChip T="string" Size="Size.Small" Color="@CapDoColor(grp.CapDo)">
                                 @CapDoLabel(grp.CapDo)
                             </MudChip>
+                            @if (grp.Files.Any(f => f.LoaiFile == 1))
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Color="Color.Info" Title="Có hình ảnh" />
+                            }
+                            @if (grp.Files.Any(f => f.LoaiFile == 2))
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" Color="Color.Secondary" Title="Có âm thanh" />
+                            }
                             <MudText Typo="Typo.body2" Class="flex-grow-1" Style="white-space:normal">
                                 @Truncate(grp.NoiDung ?? "", 100)
                             </MudText>
@@ -160,6 +176,9 @@ else
                         </div>
                     </TitleContent>
                     <ChildContent>
+                        @* Media của passage nhóm *@
+                        @RenderMedia(grp.Files)
+
                         @if (grp.CauHoiCons.Count == 0)
                         {
                             <MudText Typo="Typo.body2" Class="mud-text-secondary pa-2">
@@ -182,6 +201,7 @@ else
                                         <MudText Typo="Typo.body2" Style="white-space:normal">
                                             @Truncate(context.NoiDung ?? "", 120)
                                         </MudText>
+                                        @RenderMedia(context.Files)
                                     </MudTd>
                                     <MudTd>
                                         @{
@@ -255,6 +275,48 @@ else
         if (result is { Canceled: false })
             await LoadQuestionsAsync();
     }
+
+    private async Task OpenMediaDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<MediaUploadDialog>("Quản lý Media", options);
+    }
+
+    private static RenderFragment RenderMedia(List<FileDinhKemDto> files) => builder =>
+    {
+        var images = files.Where(f => f.LoaiFile == 1).ToList();
+        var audios = files.Where(f => f.LoaiFile == 2).ToList();
+
+        int seq = 0;
+        if (images.Count > 0)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "d-flex flex-wrap gap-1 mt-1");
+            foreach (var img in images)
+            {
+                builder.OpenElement(seq++, "img");
+                builder.AddAttribute(seq++, "src", img.Url);
+                builder.AddAttribute(seq++, "alt", img.TenFile);
+                builder.AddAttribute(seq++, "style", "max-height:80px;max-width:120px;object-fit:contain;border:1px solid #ddd;border-radius:4px");
+                builder.CloseElement();
+            }
+            builder.CloseElement();
+        }
+
+        foreach (var audio in audios)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "mt-1");
+            builder.OpenElement(seq++, "audio");
+            builder.AddAttribute(seq++, "controls", true);
+            builder.AddAttribute(seq++, "style", "height:36px;max-width:280px");
+            builder.OpenElement(seq++, "source");
+            builder.AddAttribute(seq++, "src", audio.Url);
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+    };
 
     private async Task DeleteAsync(Guid id)
     {

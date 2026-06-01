@@ -10,8 +10,11 @@ public class CauHoiRepository(QuestionBankDbContext context) : ICauHoiRepository
     public async Task<List<CauHoi>> GetByPhanAsync(Guid maPhan)
         => await context.CauHois
                .Include(c => c.CauTraLois)
+               .Include(c => c.Files)
                .Include(c => c.CauHoiCons.Where(con => con.XoaTamCauHoi != true))
                    .ThenInclude(con => con.CauTraLois)
+               .Include(c => c.CauHoiCons.Where(con => con.XoaTamCauHoi != true))
+                   .ThenInclude(con => con.Files)
                .Where(c => c.MaPhan == maPhan && c.XoaTamCauHoi != true && c.MaCauHoiCha == null)
                .OrderBy(c => c.MaSoCauHoi)
                .ToListAsync();
@@ -47,10 +50,12 @@ public class CauHoiRepository(QuestionBankDbContext context) : ICauHoiRepository
         await context.SaveChangesAsync();
     }
 
-    public async Task BulkImportAsync(List<CauHoi> cauHois, List<CauTraLoi> cauTraLois)
+    public async Task BulkImportAsync(List<CauHoi> cauHois, List<CauTraLoi> cauTraLois, List<FileDinhKem>? files = null)
     {
         context.CauHois.AddRange(cauHois);
         context.CauTraLois.AddRange(cauTraLois);
+        if (files is { Count: > 0 })
+            context.Files.AddRange(files);
         await context.SaveChangesAsync();
     }
 

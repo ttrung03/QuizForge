@@ -1,0 +1,41 @@
+# Bỏ qua tất cả file media được upload lên
+
+# Hình ảnh
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.bmp
+*.svg
+*.ico
+*.tiff
+
+# Audio
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.aac
+*.m4a
+*.wma
+
+# Video
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.flv
+*.wmv
+
+# Tài liệu
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+
+# Giữ lại file .gitkeep để track thư mục rỗng
+!.gitkeep
+!**/.gitkeep
