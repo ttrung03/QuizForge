@@ -15,6 +15,8 @@ public partial class DeThi
 
     public bool? DaDuyet { get; set; }
 
+    public int? MaDe { get; set; }
+
     public virtual ICollection<ChiTietDeThi> ChiTietDeThis { get; set; } = new List<ChiTietDeThi>();
 
     public virtual MonHoc MaMonHocNavigation { get; set; } = null!;

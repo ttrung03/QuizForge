@@ -1,0 +1,215 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject PhanService PhanService
+@inject CauHoiService CauHoiService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.NoteAdd" Class="mr-2" />
+            Tạo đề thi mới
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            @* Tên đề thi *@
+            <MudTextField @bind-Value="_tenDeThi"
+                          Label="Tên đề thi"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          Immediate="true" />
+
+            @* Chọn Phần *@
+            <MudSelect T="Guid"
+                       Value="_maPhanSelected"
+                       ValueChanged="OnPhanChanged"
+                       Label="Chọn Phần để duyệt câu hỏi"
+                       Variant="Variant.Outlined"
+                       Disabled="@(_phanList.Count == 0)">
+                @foreach (var p in _phanList)
+                {
+                    <MudSelectItem Value="@p.MaPhan">@p.TenPhan</MudSelectItem>
+                }
+            </MudSelect>
+
+            @* Danh sách câu hỏi *@
+            @if (_loadingQuestions)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            }
+            else if (_maPhanSelected != Guid.Empty && _questionsInPhan.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">Phần này chưa có câu hỏi.</MudAlert>
+            }
+            else if (_questionsInPhan.Count > 0)
+            {
+                <div style="max-height:400px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:4px;">
+                    @{
+                        var singles = _questionsInPhan.Where(q => !q.LaCauNhom).ToList();
+                        var groups  = _questionsInPhan.Where(q =>  q.LaCauNhom).ToList();
+                    }
+
+                    @* Câu hỏi đơn *@
+                    @if (singles.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary px-3 pt-2 d-block">
+                            CÂU HỎI ĐƠN (@singles.Count)
+                        </MudText>
+                        @foreach (var q in singles)
+                        {
+                            <div class="d-flex align-center px-3 py-1" style="border-bottom:1px solid #f5f5f5">
+                                <MudCheckBox T="bool"
+                                             Value="@IsSelected(q.MaCauHoi)"
+                                             ValueChanged="@(v => ToggleSelect(v, q))"
+                                             Color="Color.Primary"
+                                             Dense="true" />
+                                <MudChip T="string" Size="Size.Small" Color="@CapDoColor(q.CapDo)" Class="mr-2">
+                                    @CapDoLabel(q.CapDo)
+                                </MudChip>
+                                <MudText Typo="Typo.body2" Style="white-space:normal; flex:1">
+                                    <b>#@q.MaSoCauHoi</b> @Truncate(q.NoiDung ?? "", 100)
+                                </MudText>
+                            </div>
+                        }
+                    }
+
+                    @* Câu hỏi nhóm *@
+                    @if (groups.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary px-3 pt-2 d-block">
+                            CÂU HỎI NHÓM (@groups.Count nhóm)
+                        </MudText>
+                        @foreach (var grp in groups)
+                        {
+                            <div style="border-bottom:1px solid #f0f0f0">
+                                <div class="d-flex align-center px-3 py-1" style="background:#fafafa">
+                                    <MudCheckBox T="bool"
+                                                 Value="@IsGroupSelected(grp)"
+                                                 ValueChanged="@(v => ToggleGroup(v, grp))"
+                                                 Color="Color.Info"
+                                                 Dense="true" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mr-1">
+                                        @grp.SoCauHoiCon câu con
+                                    </MudChip>
+                                    <MudText Typo="Typo.body2" Style="white-space:normal; flex:1">
+                                        <b>#@grp.MaSoCauHoi</b> @Truncate(grp.NoiDung ?? "", 80)
+                                    </MudText>
+                                </div>
+                                @foreach (var sub in grp.CauHoiCons)
+                                {
+                                    <div class="d-flex align-center pl-6 pr-3 py-1" style="border-top:1px solid #f5f5f5">
+                                        <MudCheckBox T="bool"
+                                                     Value="@IsSelected(sub.MaCauHoi)"
+                                                     ValueChanged="@(v => ToggleSelect(v, sub))"
+                                                     Color="Color.Primary"
+                                                     Dense="true" />
+                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(sub.CapDo)" Class="mr-2">
+                                            @CapDoLabel(sub.CapDo)
+                                        </MudChip>
+                                        <MudText Typo="Typo.body2" Style="white-space:normal; flex:1">
+                                            @Truncate(sub.NoiDung ?? "", 100)
+                                        </MudText>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Đã chọn: <b>@_selected.Count</b> câu hỏi
+                </MudText>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Hủy</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!CanSave)"
+                   OnClick="Submit">
+            Tạo đề thi (@_selected.Count câu)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Guid MaMonHoc { get; set; }
+
+    string _tenDeThi = "";
+    Guid   _maPhanSelected = Guid.Empty;
+    bool   _loadingQuestions;
+
+    List<PhanDto>   _phanList        = [];
+    List<CauHoiDto> _questionsInPhan = [];
+
+    // Key: MaCauHoi, Value: (MaCauHoi, MaPhan)
+    Dictionary<Guid, SelectedCauHoiDto> _selected = [];
+
+    bool CanSave => !string.IsNullOrWhiteSpace(_tenDeThi) && _selected.Count > 0;
+
+    protected override async Task OnInitializedAsync()
+        => _phanList = await PhanService.GetAllByMonHocAsync(MaMonHoc);
+
+    private async Task OnPhanChanged(Guid maPhan)
+    {
+        _maPhanSelected  = maPhan;
+        _questionsInPhan = [];
+        if (maPhan == Guid.Empty) return;
+        _loadingQuestions = true;
+        try   { _questionsInPhan = await CauHoiService.GetByPhanAsync(maPhan); }
+        finally { _loadingQuestions = false; }
+    }
+
+    private bool IsSelected(Guid maCauHoi) => _selected.ContainsKey(maCauHoi);
+
+    private bool IsGroupSelected(CauHoiDto grp)
+        => grp.CauHoiCons.Count > 0 && grp.CauHoiCons.All(c => IsSelected(c.MaCauHoi));
+
+    private void ToggleSelect(bool value, CauHoiDto q)
+    {
+        var dto = new SelectedCauHoiDto { MaCauHoi = q.MaCauHoi, MaPhan = q.MaPhan };
+        if (value) _selected[q.MaCauHoi] = dto;
+        else       _selected.Remove(q.MaCauHoi);
+    }
+
+    private void ToggleGroup(bool value, CauHoiDto grp)
+    {
+        foreach (var sub in grp.CauHoiCons)
+            ToggleSelect(value, sub);
+    }
+
+    private void Submit()
+    {
+        var dto = new SaveDeThiDto
+        {
+            MaMonHoc  = MaMonHoc,
+            TenDeThi  = _tenDeThi,
+            CauHois   = _selected.Values.ToList()
+        };
+        MudDialog.Close(DialogResult.Ok(dto));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private static string Truncate(string s, int max)
+        => s.Length <= max ? s : s[..max] + "…";
+
+    private static Color CapDoColor(short cap) => cap switch
+    {
+        1 => Color.Success,
+        2 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private static string CapDoLabel(short cap) => cap switch
+    {
+        1 => "Dễ",
+        2 => "TB",
+        _ => "Khó"
+    };
+}

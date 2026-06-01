@@ -143,6 +143,7 @@ public class QuestionBankDbContext : DbContext
             entity.HasKey(e => e.MaDeThi);
             entity.ToTable("DeThi");
             entity.Property(e => e.TenDeThi).IsRequired().HasMaxLength(250);
+            entity.Property(e => e.MaDe);
 
             // FK: DeThi → MonHoc (ON UPDATE CASCADE)
             entity.HasOne(e => e.MaMonHocNavigation)
