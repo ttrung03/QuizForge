@@ -1,11 +1,13 @@
 @using MudBlazor
 @using QuestionBank.Web.Application.DTOs
 @using QuestionBank.Web.Application.Services
+@using Microsoft.AspNetCore.Hosting
 @inject CauHoiService CauHoiService
 @inject DeThiService DeThiService
 @inject PhanService PhanService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IWebHostEnvironment Env
 
 <MudDialog Style="max-width:860px">
     <TitleContent>
@@ -138,6 +140,12 @@
                                               Variant="Variant.Outlined"
                                               Lines="6"
                                               Class="mb-2" />
+                                @* Audio edit section *@
+                                @foreach (var audioFile in cauHoi.Files.Where(f => f.LoaiFile == 2))
+                                {
+                                    <AudioReplaceRow Audio="@audioFile"
+                                                     OnReplaced="@(updated => { audioFile.TenFile = updated.TenFile; StateHasChanged(); })" />
+                                }
                                 <div class="d-flex gap-2 mt-2">
                                     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                                Size="Size.Small"
@@ -328,6 +336,11 @@
                                               Variant="Variant.Outlined"
                                               Lines="3"
                                               Class="mb-2" />
+                                @foreach (var audioFile in cauHoi.Files.Where(f => f.LoaiFile == 2))
+                                {
+                                    <AudioReplaceRow Audio="@audioFile"
+                                                     OnReplaced="@(updated => { audioFile.TenFile = updated.TenFile; StateHasChanged(); })" />
+                                }
                                 <MudSelect T="short" @bind-Value="_editCapDo"
                                            Label="Cấp độ"
                                            Variant="Variant.Outlined"

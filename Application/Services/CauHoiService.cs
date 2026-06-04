@@ -156,6 +156,9 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
     public async Task DeleteAsync(Guid id)
         => await repo.SoftDeleteAsync(id);
 
+    public async Task ReplaceAudioAsync(Guid maFile, string newTenFile)
+        => await repo.ReplaceAudioAsync(maFile, newTenFile);
+
     private static List<CauTraLoi> MapAnswers(List<ImportCauTraLoiDto> src, Guid maCauHoi)
         => src.Select(a => new CauTraLoi
         {
