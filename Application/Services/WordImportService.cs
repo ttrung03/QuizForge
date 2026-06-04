@@ -14,8 +14,9 @@ public class WordImportService
 {
     private static readonly Regex CloPrefix    = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
     private static readonly Regex AnswerLine   = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
-    private static readonly Regex ImgMarker    = new(@"\[<img>([^<]+)</img>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex AudioMarker  = new(@"\[<audio>([^<]+)</audio>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    // Supports both [<img>file[</img>] and legacy [<img>file</img>] formats
+    private static readonly Regex ImgMarker    = new(@"\[<img>\]?([^\[<]+?)\]?\[?</img>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex AudioMarker  = new(@"\[<audio>\]?([^\[<]+?)\]?\[?</audio>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 //    private static readonly Regex CapDoPrefix  = new(@"^\(<(\d+)>\)", RegexOptions.Compiled);
     private const string EndMarker = "[<br>]";
 

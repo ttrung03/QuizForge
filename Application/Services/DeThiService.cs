@@ -88,6 +88,7 @@ public class DeThiService(IDeThiRepository repo, ICauHoiRepository cauHoiRepo)
                 NoiDung    = g.First().MaCauHoiNavigation!.CauHoiCha?.NoiDung,
                 CapDo      = g.First().MaCauHoiNavigation!.CauHoiCha?.CapDo ?? 1,
                 LaCauNhom  = true,
+                Files      = MapFiles(g.First().MaCauHoiNavigation!.CauHoiCha?.Files),
                 CauHoiCons = g.OrderBy(c => c.ThuTu).Select(c => new ChiTietDeThiDto
                 {
                     MaCauHoi   = c.MaCauHoi,
@@ -96,6 +97,7 @@ public class DeThiService(IDeThiRepository repo, ICauHoiRepository cauHoiRepo)
                     MaSoCauHoi = c.MaCauHoiNavigation?.MaSoCauHoi ?? 0,
                     NoiDung    = c.MaCauHoiNavigation?.NoiDung,
                     CapDo      = c.MaCauHoiNavigation?.CapDo ?? 1,
+                    Files      = MapFiles(c.MaCauHoiNavigation?.Files),
                     CauTraLois = MapCauTraLois(c.MaCauHoiNavigation?.CauTraLois)
                 }).ToList()
             });
@@ -109,6 +111,7 @@ public class DeThiService(IDeThiRepository repo, ICauHoiRepository cauHoiRepo)
             MaSoCauHoi = c.MaCauHoiNavigation?.MaSoCauHoi ?? 0,
             NoiDung    = c.MaCauHoiNavigation?.NoiDung,
             CapDo      = c.MaCauHoiNavigation?.CapDo ?? 1,
+            Files      = MapFiles(c.MaCauHoiNavigation?.Files),
             CauTraLois = MapCauTraLois(c.MaCauHoiNavigation?.CauTraLois)
         });
 
@@ -132,5 +135,13 @@ public class DeThiService(IDeThiRepository repo, ICauHoiRepository cauHoiRepo)
             ThuTu       = a.ThuTu,
             LaDapAn     = a.LaDapAn,
             HoanVi      = a.HoanVi
+        }).ToList() ?? [];
+
+    private static List<FileDinhKemDto> MapFiles(IEnumerable<FileDinhKem>? files)
+        => files?.Select(f => new FileDinhKemDto
+        {
+            MaFile   = f.MaFile,
+            LoaiFile = f.LoaiFile ?? 0,
+            TenFile  = f.TenFile ?? ""
         }).ToList() ?? [];
 }
