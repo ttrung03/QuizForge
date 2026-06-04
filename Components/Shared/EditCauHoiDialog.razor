@@ -1,0 +1,152 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject CauHoiService CauHoiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_noiDung"
+                              Label="Nội dung câu hỏi"
+                              Variant="Variant.Outlined"
+                              Lines="4"
+                              AutoGrow="true" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="short" @bind-Value="_capDo" Label="Cấp độ" Variant="Variant.Outlined">
+                    <MudSelectItem Value="(short)1">Dễ</MudSelectItem>
+                    <MudSelectItem Value="(short)2">Trung bình</MudSelectItem>
+                    <MudSelectItem Value="(short)3">Khó</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            @if (CauHoi.Files.Count > 0)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">Media đính kèm</MudText>
+                    <div class="d-flex flex-wrap gap-2 mb-1">
+                        @foreach (var f in CauHoi.Files.Where(f => f.LoaiFile == 1))
+                        {
+                            <img src="@f.Url" alt="@f.TenFile"
+                                 style="max-height:120px;max-width:180px;object-fit:contain;border:1px solid #ddd;border-radius:4px;cursor:zoom-in"
+                                 @onclick="() => _lightboxUrl = f.Url" />
+                        }
+                    </div>
+                    @foreach (var f in CauHoi.Files.Where(f => f.LoaiFile == 2))
+                    {
+                        <audio controls style="height:36px;width:100%;margin-top:4px">
+                            <source src="@f.Url" />
+                        </audio>
+                    }
+                </MudItem>
+            }
+
+            @if (_answers.Count > 0)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Đáp án</MudText>
+                    <MudRadioGroup T="Guid" @bind-Value="_dapAnDungId">
+                        @foreach (var a in _answers)
+                        {
+                            var letter = "ABCD"[a.ThuTu - 1].ToString();
+                            <div class="d-flex align-center gap-2 mb-2">
+                                <MudRadio Value="@a.MaCauTraLoi" Color="Color.Success"
+                                          Title="Đánh dấu là đáp án đúng" />
+                                <MudTextField @bind-Value="a.NoiDung"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              FullWidth="true"
+                                              Label="@letter" />
+                            </div>
+                        }
+                    </MudRadioGroup>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Hủy</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="SaveAsync" Disabled="_saving">
+            @(_saving ? "Đang lưu…" : "Lưu")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@if (_lightboxUrl != null)
+{
+    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
+         @onclick="() => _lightboxUrl = null">
+        <img src="@_lightboxUrl"
+             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 4px 32px #000"
+             @onclick:stopPropagation />
+    </div>
+}
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public CauHoiDto CauHoi { get; set; } = null!;
+
+    string _noiDung = "";
+    short _capDo = 1;
+    List<EditableAnswer> _answers = [];
+    Guid _dapAnDungId;
+    bool _saving;
+    string? _lightboxUrl;
+
+    protected override void OnParametersSet()
+    {
+        _noiDung = CauHoi.NoiDung ?? "";
+        _capDo = CauHoi.CapDo;
+        _answers = CauHoi.CauTraLois
+            .OrderBy(a => a.ThuTu)
+            .Select(a => new EditableAnswer
+            {
+                MaCauTraLoi = a.MaCauTraLoi,
+                ThuTu = a.ThuTu,
+                NoiDung = a.NoiDung ?? "",
+                LaDapAn = a.LaDapAn
+            }).ToList();
+        _dapAnDungId = CauHoi.CauTraLois.FirstOrDefault(a => a.LaDapAn)?.MaCauTraLoi ?? Guid.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            foreach (var a in _answers)
+                a.LaDapAn = a.MaCauTraLoi == _dapAnDungId;
+
+            var dto = new UpdateCauHoiDto
+            {
+                MaCauHoi   = CauHoi.MaCauHoi,
+                NoiDung    = _noiDung,
+                CapDo      = _capDo,
+                CauTraLois = _answers.Select(a => new UpdateCauTraLoiDto
+                {
+                    MaCauTraLoi = a.MaCauTraLoi,
+                    NoiDung     = a.NoiDung,
+                    LaDapAn     = a.LaDapAn
+                }).ToList()
+            };
+
+            await CauHoiService.UpdateAsync(dto);
+            Snackbar.Add("Đã lưu câu hỏi.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        finally { _saving = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private sealed class EditableAnswer
+    {
+        public Guid MaCauTraLoi { get; set; }
+        public int ThuTu { get; set; }
+        public string NoiDung { get; set; } = "";
+        public bool LaDapAn { get; set; }
+    }
+}

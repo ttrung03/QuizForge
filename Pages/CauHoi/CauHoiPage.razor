@@ -123,8 +123,11 @@ else
                         </MudChip>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="" Style="width:56px">
+                <TemplateColumn Title="" Style="width:96px">
                     <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Size="Size.Small" Color="Color.Primary"
+                                       OnClick="() => OpenEditDialog(context.Item)" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                        Size="Size.Small" Color="Color.Error"
                                        OnClick="() => DeleteAsync(context.Item.MaCauHoi)" />
@@ -168,7 +171,10 @@ else
                             <MudText Typo="Typo.body2" Class="flex-grow-1" Style="white-space:normal">
                                 @Truncate(grp.NoiDung ?? "", 100)
                             </MudText>
-                            <span @onclick:stopPropagation="true">
+                            <span @onclick:stopPropagation="true" class="d-flex gap-1">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Size="Size.Small" Color="Color.Primary"
+                                               OnClick="@(() => OpenEditDialog(grp))" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                Size="Size.Small" Color="Color.Error"
                                                OnClick="@(() => DeleteAsync(grp.MaCauHoi))" />
@@ -194,6 +200,7 @@ else
                                     <MudTh>Nội dung</MudTh>
                                     <MudTh Style="width:200px">Đáp án đúng</MudTh>
                                     <MudTh Style="width:90px">Cấp độ</MudTh>
+                                    <MudTh Style="width:48px"></MudTh>
                                 </HeaderContent>
                                 <RowTemplate>
                                     <MudTd>@(grp.CauHoiCons.IndexOf(context) + 1)</MudTd>
@@ -217,6 +224,11 @@ else
                                             @CapDoLabel(context.CapDo)
                                         </MudChip>
                                     </MudTd>
+                                    <MudTd>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Size="Size.Small" Color="Color.Primary"
+                                                       OnClick="() => OpenEditDialog(context)" />
+                                    </MudTd>
                                 </RowTemplate>
                             </MudTable>
                         }
@@ -231,14 +243,25 @@ else
     </MudText>
 }
 
+@if (_lightboxUrl != null)
+{
+    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
+         @onclick="() => _lightboxUrl = null">
+        <img src="@_lightboxUrl"
+             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 4px 32px #000"
+             @onclick:stopPropagation />
+    </div>
+}
+
 @code {
     List<MonHocDto> _monHocList = [];
     List<PhanDto>   _phanList   = [];
     List<CauHoiDto> _questions  = [];
 
-    Guid _maMonHoc = Guid.Empty;
-    Guid _maPhan   = Guid.Empty;
-    bool _loading  = false;
+    Guid    _maMonHoc   = Guid.Empty;
+    Guid    _maPhan     = Guid.Empty;
+    bool    _loading    = false;
+    string? _lightboxUrl;
 
     protected override async Task OnInitializedAsync()
         => _monHocList = await MonHocService.GetAllAsync();
@@ -282,7 +305,21 @@ else
         await DialogService.ShowAsync<MediaUploadDialog>("Quản lý Media", options);
     }
 
-    private static RenderFragment RenderMedia(List<FileDinhKemDto> files) => builder =>
+    private async Task OpenEditDialog(CauHoiDto cauHoi)
+    {
+        var parameters = new DialogParameters<EditCauHoiDialog>
+        {
+            { x => x.CauHoi, cauHoi }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var title   = cauHoi.LaCauNhom ? "Chỉnh sửa câu nhóm" : "Chỉnh sửa câu hỏi";
+        var dialog  = await DialogService.ShowAsync<EditCauHoiDialog>(title, parameters, options);
+        var result  = await dialog.Result;
+        if (result is { Canceled: false })
+            await LoadQuestionsAsync();
+    }
+
+    private RenderFragment RenderMedia(List<FileDinhKemDto> files) => builder =>
     {
         var images = files.Where(f => f.LoaiFile == 1).ToList();
         var audios = files.Where(f => f.LoaiFile == 2).ToList();
@@ -297,7 +334,8 @@ else
                 builder.OpenElement(seq++, "img");
                 builder.AddAttribute(seq++, "src", img.Url);
                 builder.AddAttribute(seq++, "alt", img.TenFile);
-                builder.AddAttribute(seq++, "style", "max-height:80px;max-width:120px;object-fit:contain;border:1px solid #ddd;border-radius:4px");
+                builder.AddAttribute(seq++, "style", "max-height:80px;max-width:120px;object-fit:contain;border:1px solid #ddd;border-radius:4px;cursor:zoom-in");
+                builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => _lightboxUrl = img.Url));
                 builder.CloseElement();
             }
             builder.CloseElement();
