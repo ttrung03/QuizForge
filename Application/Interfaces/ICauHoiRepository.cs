@@ -13,4 +13,6 @@ public interface ICauHoiRepository
     Task UpdateAsync(Guid maCauHoi, string noiDung, short capDo, List<(Guid id, string noiDung, bool laDapAn)> answers);
     Task UpdateCauTraLoiThuTuAsync(List<(Guid maCauTraLoi, int thuTu)> orders);
     Task ReplaceAudioAsync(Guid maFile, string newTenFile);
+    Task ReplaceImageAsync(Guid maFile, string newTenFile);
+    Task<Guid> AddImageAsync(Guid maCauHoi, string tenFile);
 }

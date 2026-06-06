@@ -1,0 +1,237 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment Env
+@inject CauHoiService CauHoiService
+@inject ISnackbar Snackbar
+
+<div style="margin:6px 0 10px">
+    @* Current image row *@
+    <div style="display:flex;align-items:center;gap:8px;background:#f3f3f3;border-radius:8px;padding:6px 10px;border:1px solid #e0e0e0">
+        <img src="@Image.Url" alt="@Image.TenFile"
+             style="height:48px;max-width:80px;object-fit:contain;border-radius:4px;border:1px solid #ddd;cursor:zoom-in"
+             @onclick="() => _lightboxUrl = Image.Url" />
+        <span style="font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;max-width:120px;white-space:nowrap;flex:1">
+            @Image.TenFile
+        </span>
+        <MudIconButton Icon="@(_showReplace ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.SwapHoriz)"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       title="Đổi hình ảnh"
+                       OnClick="ToggleReplace" />
+    </div>
+
+    @* Replace panel *@
+    @if (_showReplace)
+    {
+        <div style="background:#e8f5e9;border:1px dashed #43a047;border-radius:6px;padding:10px 12px;margin-top:4px">
+            <div style="font-size:12px;font-weight:600;color:#2e7d32;margin-bottom:10px">
+                Đổi hình ảnh — chọn file đã upload hoặc upload file mới
+            </div>
+
+            @* Tab selector *@
+            <div style="display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid #a5d6a7">
+                <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_tab==0?"700":"400");background:@(_tab==0?"#a5d6a7":"transparent");color:@(_tab==0?"#1b5e20":"#888")"
+                        @onclick="@(() => { _tab = 0; _selectedFile = null; })">
+                    Chọn từ thư viện
+                </button>
+                <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_tab==1?"700":"400");background:@(_tab==1?"#a5d6a7":"transparent");color:@(_tab==1?"#1b5e20":"#888")"
+                        @onclick="@(() => { _tab = 1; _selectedExisting = null; })">
+                    Upload file mới
+                </button>
+            </div>
+
+            @* Tab 0: pick from existing *@
+            @if (_tab == 0)
+            {
+                @if (_existingFiles.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Chưa có file hình ảnh trên server.</MudText>
+                }
+                else
+                {
+                    <div style="max-height:200px;overflow-y:auto;border:1px solid #a5d6a7;border-radius:4px;background:#f1f8e9">
+                        @foreach (var f in _existingFiles)
+                        {
+                            var isSelected = _selectedExisting == f;
+                            <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;border-bottom:1px solid #dcedc8;background:@(isSelected?"#a5d6a7":"transparent")"
+                                 @onclick="@(() => _selectedExisting = f)">
+                                <img src="/uploads/images/@f" alt="@f"
+                                     style="height:36px;max-width:60px;object-fit:contain;border-radius:2px;border:1px solid #c5e1a5" />
+                                <span style="font-size:13px;flex:1">@f</span>
+                                @if (isSelected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                             Style="color:#43a047" />
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (_selectedExisting is not null)
+                    {
+                        var previewUrl = "/uploads/images/" + _selectedExisting;
+                        <div style="margin-top:6px;text-align:center">
+                            <img src="@previewUrl" alt="@_selectedExisting"
+                                 style="max-height:120px;max-width:100%;object-fit:contain;border-radius:4px;border:1px solid #a5d6a7;cursor:zoom-in"
+                                 @onclick="() => _lightboxUrl = previewUrl" />
+                        </div>
+                    }
+                }
+
+                <div class="d-flex gap-2 mt-2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Check"
+                               Disabled="@(_selectedExisting is null || _uploading)"
+                               OnClick="ApplyExistingAsync">
+                        @(_uploading ? "Đang lưu…" : "Dùng file này")
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ToggleReplace">Hủy</MudButton>
+                </div>
+            }
+
+            @* Tab 1: upload new file *@
+            @if (_tab == 1)
+            {
+                <div class="d-flex align-center gap-2 flex-wrap">
+                    <MudFileUpload T="IBrowserFile"
+                                   Accept=".jpg,.jpeg,.png,.gif,.webp,.bmp"
+                                   FilesChanged="OnFileSelected">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.Image"
+                                       Color="Color.Success"
+                                       Size="Size.Small">
+                                @(_selectedFile is null ? "Chọn file hình ảnh" : _selectedFile.Name)
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
+
+                    @if (_selectedFile is not null)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                                   Disabled="_uploading"
+                                   OnClick="UploadAsync">
+                            @if (_uploading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                            }
+                            <span>@(_uploading ? "Đang lưu…" : "Upload & Lưu")</span>
+                        </MudButton>
+                    }
+
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ToggleReplace">Hủy</MudButton>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* Lightbox *@
+@if (_lightboxUrl != null)
+{
+    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
+         @onclick="() => _lightboxUrl = null">
+        <img src="@_lightboxUrl"
+             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 4px 32px #000"
+             @onclick:stopPropagation />
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public FileDinhKemDto Image { get; set; } = null!;
+    [Parameter] public EventCallback<FileDinhKemDto> OnReplaced { get; set; }
+
+    bool _showReplace = false;
+    int  _tab = 0;
+
+    List<string> _existingFiles   = [];
+    string?      _selectedExisting;
+
+    IBrowserFile? _selectedFile;
+
+    bool    _uploading  = false;
+    string? _lightboxUrl;
+
+    void ToggleReplace()
+    {
+        _showReplace = !_showReplace;
+        if (_showReplace)
+            LoadExisting();
+        else
+        {
+            _selectedFile     = null;
+            _selectedExisting = null;
+        }
+    }
+
+    void LoadExisting()
+    {
+        var dir = Path.Combine(Env.WebRootPath, "uploads", "images");
+        if (!Directory.Exists(dir)) { _existingFiles = []; return; }
+        _existingFiles = Directory.GetFiles(dir)
+            .Select(Path.GetFileName)
+            .Where(f => f is not null)
+            .Select(f => f!)
+            .OrderBy(f => f)
+            .ToList();
+    }
+
+    void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
+
+    async Task ApplyExistingAsync()
+    {
+        if (_selectedExisting is null) return;
+        _uploading = true;
+        try
+        {
+            await CauHoiService.ReplaceImageAsync(Image.MaFile, _selectedExisting);
+            Image.TenFile     = _selectedExisting;
+            _showReplace      = false;
+            _selectedExisting = null;
+            Snackbar.Add($"Đã đổi hình ảnh thành \"{_selectedExisting}\".", Severity.Success);
+            await OnReplaced.InvokeAsync(Image);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _uploading = false; }
+    }
+
+    async Task UploadAsync()
+    {
+        if (_selectedFile is null) return;
+        _uploading = true;
+        try
+        {
+            var safeName = Path.GetFileName(_selectedFile.Name);
+            var destDir  = Path.Combine(Env.WebRootPath, "uploads", "images");
+            Directory.CreateDirectory(destDir);
+            var destPath = Path.Combine(destDir, safeName);
+
+            await using var fs  = new FileStream(destPath, FileMode.Create);
+            await using var src = _selectedFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+            await src.CopyToAsync(fs);
+
+            await CauHoiService.ReplaceImageAsync(Image.MaFile, safeName);
+
+            Image.TenFile = safeName;
+            _showReplace  = false;
+            _selectedFile = null;
+
+            Snackbar.Add($"Đã thay thế hình ảnh bằng \"{safeName}\".", Severity.Success);
+            await OnReplaced.InvokeAsync(Image);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi upload: {ex.Message}", Severity.Error);
+        }
+        finally { _uploading = false; }
+    }
+}

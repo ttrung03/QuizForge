@@ -1,6 +1,7 @@
 @using MudBlazor
 @using QuestionBank.Web.Application.DTOs
 @using QuestionBank.Web.Application.Services
+@using Microsoft.AspNetCore.Hosting
 @inject CauHoiService CauHoiService
 @inject ISnackbar Snackbar
 @inject IWebHostEnvironment Env
@@ -23,25 +24,139 @@
                 </MudSelect>
             </MudItem>
 
-            @if (CauHoi.Files.Count > 0)
-            {
-                <MudItem xs="12">
+            @* ── Media đã đính kèm ── *@
+            <MudItem xs="12">
+                @if (CauHoi.Files.Any(f => f.LoaiFile == 1) || CauHoi.Files.Any(f => f.LoaiFile == 2))
+                {
                     <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">Media đính kèm</MudText>
-                    <div class="d-flex flex-wrap gap-2 mb-1">
-                        @foreach (var f in CauHoi.Files.Where(f => f.LoaiFile == 1))
-                        {
-                            <img src="@f.Url" alt="@f.TenFile"
-                                 style="max-height:120px;max-width:180px;object-fit:contain;border:1px solid #ddd;border-radius:4px;cursor:zoom-in"
-                                 @onclick="() => _lightboxUrl = f.Url" />
-                        }
-                    </div>
+                    @foreach (var f in CauHoi.Files.Where(f => f.LoaiFile == 1))
+                    {
+                        <ImageReplaceRow Image="@f"
+                                         OnReplaced="@(updated => { f.TenFile = updated.TenFile; StateHasChanged(); })" />
+                    }
                     @foreach (var f in CauHoi.Files.Where(f => f.LoaiFile == 2))
                     {
                         <AudioReplaceRow Audio="@f"
                                          OnReplaced="@(updated => { f.TenFile = updated.TenFile; StateHasChanged(); })" />
                     }
-                </MudItem>
-            }
+                }
+
+                @* ── Thêm ảnh mới ── *@
+                <div class="mt-1">
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               StartIcon="@(_showAddImage ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.AddPhotoAlternate)"
+                               Color="Color.Primary"
+                               OnClick="@(() => { _showAddImage = !_showAddImage; if (_showAddImage) LoadImageLibrary(); })">
+                        Gắn ảnh mới
+                    </MudButton>
+                </div>
+
+                @if (_showAddImage)
+                {
+                    <div style="background:#e8f5e9;border:1px dashed #43a047;border-radius:6px;padding:10px 12px;margin-top:4px">
+                        <div style="font-size:12px;font-weight:600;color:#2e7d32;margin-bottom:10px">
+                            Gắn hình ảnh — chọn file đã upload hoặc upload file mới
+                        </div>
+
+                        @* Tab selector *@
+                        <div style="display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid #a5d6a7">
+                            <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_addTab==0?"700":"400");background:@(_addTab==0?"#a5d6a7":"transparent");color:@(_addTab==0?"#1b5e20":"#888")"
+                                    @onclick="@(() => { _addTab = 0; _addNewFile = null; })">
+                                Chọn từ thư viện
+                            </button>
+                            <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_addTab==1?"700":"400");background:@(_addTab==1?"#a5d6a7":"transparent");color:@(_addTab==1?"#1b5e20":"#888")"
+                                    @onclick="@(() => { _addTab = 1; _addSelectedExisting = null; })">
+                                Upload file mới
+                            </button>
+                        </div>
+
+                        @* Tab 0: chọn từ thư viện *@
+                        @if (_addTab == 0)
+                        {
+                            @if (_imageLibrary.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    Chưa có file hình ảnh trên server. Hãy upload qua "Media".
+                                </MudText>
+                            }
+                            else
+                            {
+                                <div style="max-height:180px;overflow-y:auto;border:1px solid #a5d6a7;border-radius:4px;background:#f1f8e9">
+                                    @foreach (var f in _imageLibrary)
+                                    {
+                                        var isSelected = _addSelectedExisting == f;
+                                        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;border-bottom:1px solid #dcedc8;background:@(isSelected?"#a5d6a7":"transparent")"
+                                             @onclick="@(() => _addSelectedExisting = f)">
+                                            <img src="/uploads/images/@f" alt="@f"
+                                                 style="height:36px;max-width:60px;object-fit:contain;border-radius:2px;border:1px solid #c5e1a5" />
+                                            <span style="font-size:13px;flex:1">@f</span>
+                                            @if (isSelected)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color:#43a047" />
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                @if (_addSelectedExisting is not null)
+                                {
+                                    var previewUrl = "/uploads/images/" + _addSelectedExisting;
+                                    <div style="margin-top:6px;text-align:center">
+                                        <img src="@previewUrl" alt="@_addSelectedExisting"
+                                             style="max-height:100px;max-width:100%;object-fit:contain;border-radius:4px;border:1px solid #a5d6a7" />
+                                    </div>
+                                }
+                            }
+
+                            <div class="d-flex gap-2 mt-2">
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Check"
+                                           Disabled="@(_addSelectedExisting is null || _addSaving)"
+                                           OnClick="AddExistingImageAsync">
+                                    @(_addSaving ? "Đang lưu…" : "Gắn ảnh này")
+                                </MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           OnClick="@(() => _showAddImage = false)">Hủy</MudButton>
+                            </div>
+                        }
+
+                        @* Tab 1: upload mới *@
+                        @if (_addTab == 1)
+                        {
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <MudFileUpload T="IBrowserFile"
+                                               Accept=".jpg,.jpeg,.png,.gif,.webp,.bmp"
+                                               FilesChanged="@(f => _addNewFile = f)">
+                                    <ActivatorContent>
+                                        <MudButton Variant="Variant.Outlined"
+                                                   StartIcon="@Icons.Material.Filled.Image"
+                                                   Color="Color.Success" Size="Size.Small">
+                                            @(_addNewFile is null ? "Chọn file hình ảnh" : _addNewFile.Name)
+                                        </MudButton>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+
+                                @if (_addNewFile is not null)
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                                               Disabled="_addSaving"
+                                               OnClick="UploadAndAddImageAsync">
+                                        @if (_addSaving)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                        }
+                                        <span>@(_addSaving ? "Đang lưu…" : "Upload & Gắn")</span>
+                                    </MudButton>
+                                }
+
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           OnClick="@(() => _showAddImage = false)">Hủy</MudButton>
+                            </div>
+                        }
+                    </div>
+                }
+            </MudItem>
 
             @if (_answers.Count > 0)
             {
@@ -75,16 +190,6 @@
     </DialogActions>
 </MudDialog>
 
-@if (_lightboxUrl != null)
-{
-    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
-         @onclick="() => _lightboxUrl = null">
-        <img src="@_lightboxUrl"
-             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 4px 32px #000"
-             @onclick:stopPropagation />
-    </div>
-}
-
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public CauHoiDto CauHoi { get; set; } = null!;
@@ -94,7 +199,14 @@
     List<EditableAnswer> _answers = [];
     Guid _dapAnDungId;
     bool _saving;
-    string? _lightboxUrl;
+
+    // Add image panel
+    bool   _showAddImage      = false;
+    int    _addTab             = 0;
+    List<string> _imageLibrary = [];
+    string? _addSelectedExisting;
+    IBrowserFile? _addNewFile;
+    bool   _addSaving          = false;
 
     protected override void OnParametersSet()
     {
@@ -110,6 +222,74 @@
                 LaDapAn = a.LaDapAn
             }).ToList();
         _dapAnDungId = CauHoi.CauTraLois.FirstOrDefault(a => a.LaDapAn)?.MaCauTraLoi ?? Guid.Empty;
+    }
+
+    private void LoadImageLibrary()
+    {
+        var dir = Path.Combine(Env.WebRootPath, "uploads", "images");
+        if (!Directory.Exists(dir)) { _imageLibrary = []; return; }
+        _imageLibrary = Directory.GetFiles(dir)
+            .Select(Path.GetFileName)
+            .Where(f => f is not null)
+            .Select(f => f!)
+            .OrderBy(f => f)
+            .ToList();
+    }
+
+    private async Task AddExistingImageAsync()
+    {
+        if (_addSelectedExisting is null) return;
+        _addSaving = true;
+        try
+        {
+            var maFile = await CauHoiService.AddImageAsync(CauHoi.MaCauHoi, _addSelectedExisting);
+            CauHoi.Files.Add(new FileDinhKemDto
+            {
+                MaFile   = maFile,
+                LoaiFile = 1,
+                TenFile  = _addSelectedExisting
+            });
+            _showAddImage      = false;
+            _addSelectedExisting = null;
+            Snackbar.Add($"Đã gắn ảnh \"{_addSelectedExisting}\".", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _addSaving = false; }
+    }
+
+    private async Task UploadAndAddImageAsync()
+    {
+        if (_addNewFile is null) return;
+        _addSaving = true;
+        try
+        {
+            var safeName = Path.GetFileName(_addNewFile.Name);
+            var dir      = Path.Combine(Env.WebRootPath, "uploads", "images");
+            Directory.CreateDirectory(dir);
+
+            await using var fs  = new FileStream(Path.Combine(dir, safeName), FileMode.Create);
+            await using var src = _addNewFile.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+            await src.CopyToAsync(fs);
+
+            var maFile = await CauHoiService.AddImageAsync(CauHoi.MaCauHoi, safeName);
+            CauHoi.Files.Add(new FileDinhKemDto
+            {
+                MaFile   = maFile,
+                LoaiFile = 1,
+                TenFile  = safeName
+            });
+            _showAddImage = false;
+            _addNewFile   = null;
+            Snackbar.Add($"Đã upload và gắn ảnh \"{safeName}\".", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _addSaving = false; }
     }
 
     private async Task SaveAsync()
