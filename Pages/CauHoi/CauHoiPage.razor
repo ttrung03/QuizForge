@@ -123,8 +123,13 @@ else
                         </MudChip>
                     </CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="" Style="width:96px">
+                <TemplateColumn Title="" Style="width:120px">
                     <CellTemplate>
+                        <MudTooltip Text="Xem trước">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                           Size="Size.Small" Color="Color.Info"
+                                           OnClick="() => OpenPreviewDialog(context.Item)" />
+                        </MudTooltip>
                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                        Size="Size.Small" Color="Color.Primary"
                                        OnClick="() => OpenEditDialog(context.Item)" />
@@ -172,6 +177,11 @@ else
                                 @Truncate(grp.NoiDung ?? "", 100)
                             </MudText>
                             <span @onclick:stopPropagation="true" class="d-flex gap-1">
+                                <MudTooltip Text="Xem trước">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small" Color="Color.Info"
+                                                   OnClick="@(() => OpenPreviewDialog(grp))" />
+                                </MudTooltip>
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                Size="Size.Small" Color="Color.Primary"
                                                OnClick="@(() => OpenEditDialog(grp))" />
@@ -303,6 +313,16 @@ else
     {
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
         await DialogService.ShowAsync<MediaUploadDialog>("Quản lý Media", options);
+    }
+
+    private async Task OpenPreviewDialog(CauHoiDto cauHoi)
+    {
+        var parameters = new DialogParameters<PreviewCauHoiDialog>
+        {
+            { x => x.CauHoi, cauHoi }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<PreviewCauHoiDialog>("Xem trước câu hỏi", parameters, options);
     }
 
     private async Task OpenEditDialog(CauHoiDto cauHoi)

@@ -1,0 +1,232 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+
+<MudDialog Style="max-width:720px">
+    <TitleContent>
+        <div class="d-flex align-center gap-2" style="width:100%">
+            <MudIcon Icon="@Icons.Material.Filled.Visibility" />
+            <MudText Typo="Typo.h6" Class="flex-grow-1">Xem trước câu hỏi</MudText>
+            <MudSwitch T="bool"
+                       @bind-Value="_showAnswers"
+                       Color="Color.Success"
+                       Label="Hiển thị đáp án"
+                       Class="mr-2" />
+        </div>
+    </TitleContent>
+
+    <DialogContent>
+        @* ── Thông tin phụ ── *@
+        <div class="d-flex align-center gap-2 mb-3 pa-2"
+             style="background:#f9f9f9; border-radius:8px">
+            <MudChip T="string" Size="Size.Small" Color="@CapDoColor(CauHoi.CapDo)">
+                @CapDoLabel(CauHoi.CapDo)
+            </MudChip>
+            @if (CauHoi.LaCauNhom)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                    Câu nhóm — @CauHoi.SoCauHoiCon câu con
+                </MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                    Câu đơn
+                </MudChip>
+            }
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Mã số: <b>@CauHoi.MaSoCauHoi</b>
+            </MudText>
+        </div>
+
+        @* ── Nội dung câu hỏi ── *@
+        @{
+            const string letters = "ABCD";
+            int stt = 1;
+        }
+
+        @if (CauHoi.LaCauNhom)
+        {
+            @* ── Câu nhóm: đoạn văn + câu con ── *@
+            <MudPaper Elevation="0" Class="pa-3 mb-3"
+                      Style="background:#f0f4ff; border-left:4px solid #5c6bc0; border-radius:4px">
+                <MudText Typo="Typo.caption" Color="Color.Primary"
+                         Style="font-weight:600; text-transform:uppercase; letter-spacing:0.5px">
+                    Đoạn văn / câu dẫn
+                </MudText>
+                <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-top:6px">
+                    @CauHoi.NoiDung
+                </MudText>
+                @RenderMedia(CauHoi.Files)
+            </MudPaper>
+
+            @foreach (var con in CauHoi.CauHoiCons)
+            {
+                var conStt = stt++;
+                <div class="mb-4 pl-3" style="border-left:2px solid #c5cae9; page-break-inside:avoid">
+                    <div class="d-flex align-start gap-2">
+                        <MudText Typo="Typo.body1" Style="min-width:28px; font-weight:600">
+                            @conStt.
+                        </MudText>
+                        <div style="flex:1">
+                            <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
+                                @con.NoiDung
+                            </MudText>
+                            @RenderMedia(con.Files)
+                            <div class="pl-2 mt-1">
+                                @for (int i = 0; i < con.CauTraLois.Count; i++)
+                                {
+                                    var opt = con.CauTraLois[i];
+                                    bool isCorrect = opt.LaDapAn;
+                                    string lbl = i < letters.Length ? letters[i].ToString() : $"{i + 1}";
+                                    <div class="d-flex align-start gap-1 mb-1"
+                                         style="@((_showAnswers && isCorrect) ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
+                                        <MudText Typo="Typo.body2"
+                                                 Style="@(_showAnswers && isCorrect ? "font-weight:600; min-width:20px" : "min-width:20px")"
+                                                 Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                            @lbl.
+                                        </MudText>
+                                        <MudText Typo="Typo.body2"
+                                                 Style="white-space:pre-wrap"
+                                                 Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                            @opt.NoiDung
+                                            @if (_showAnswers && isCorrect)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                         Size="Size.Small" Color="Color.Success"
+                                                         Style="vertical-align:middle; margin-left:4px" />
+                                            }
+                                        </MudText>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(con.CapDo)"
+                                 Style="min-width:36px; flex-shrink:0">
+                            @CapDoLabel(con.CapDo)
+                        </MudChip>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            @* ── Câu đơn ── *@
+            <div class="mb-2" style="page-break-inside:avoid">
+                <div class="d-flex align-start gap-2">
+                    <MudText Typo="Typo.body1" Style="min-width:28px; font-weight:600">1.</MudText>
+                    <div style="flex:1">
+                        <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
+                            @CauHoi.NoiDung
+                        </MudText>
+                        @RenderMedia(CauHoi.Files)
+                        <div class="pl-2 mt-1">
+                            @for (int i = 0; i < CauHoi.CauTraLois.Count; i++)
+                            {
+                                var opt = CauHoi.CauTraLois[i];
+                                bool isCorrect = opt.LaDapAn;
+                                string lbl = i < letters.Length ? letters[i].ToString() : $"{i + 1}";
+                                <div class="d-flex align-start gap-1 mb-1"
+                                     style="@((_showAnswers && isCorrect) ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
+                                    <MudText Typo="Typo.body2"
+                                             Style="@(_showAnswers && isCorrect ? "font-weight:600; min-width:20px" : "min-width:20px")"
+                                             Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                        @lbl.
+                                    </MudText>
+                                    <MudText Typo="Typo.body2"
+                                             Style="white-space:pre-wrap"
+                                             Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                        @opt.NoiDung
+                                        @if (_showAnswers && isCorrect)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                     Size="Size.Small" Color="Color.Success"
+                                                     Style="vertical-align:middle; margin-left:4px" />
+                                        }
+                                    </MudText>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close">Đóng</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Lightbox *@
+@if (_lightboxUrl != null)
+{
+    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
+         @onclick="() => _lightboxUrl = null">
+        <img src="@_lightboxUrl"
+             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 4px 32px #000"
+             @onclick:stopPropagation />
+    </div>
+}
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public CauHoiDto CauHoi { get; set; } = null!;
+
+    bool    _showAnswers = false;
+    string? _lightboxUrl;
+
+    void Close() => MudDialog.Close();
+
+    RenderFragment RenderMedia(List<FileDinhKemDto> files) => builder =>
+    {
+        var images = files.Where(f => f.LoaiFile == 1).ToList();
+        var audios = files.Where(f => f.LoaiFile == 2).ToList();
+        int seq = 0;
+
+        if (images.Count > 0)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "d-flex flex-wrap gap-1 mt-1 mb-1");
+            foreach (var img in images)
+            {
+                builder.OpenElement(seq++, "img");
+                builder.AddAttribute(seq++, "src", img.Url);
+                builder.AddAttribute(seq++, "alt", img.TenFile);
+                builder.AddAttribute(seq++, "style", "max-height:120px;max-width:180px;object-fit:contain;border:1px solid #ddd;border-radius:4px;cursor:zoom-in");
+                builder.AddAttribute(seq++, "onclick",
+                    EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                        this, () => _lightboxUrl = img.Url));
+                builder.CloseElement();
+            }
+            builder.CloseElement();
+        }
+
+        foreach (var audio in audios)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "mt-1");
+            builder.OpenElement(seq++, "audio");
+            builder.AddAttribute(seq++, "controls", true);
+            builder.AddAttribute(seq++, "style", "height:36px;max-width:320px");
+            builder.OpenElement(seq++, "source");
+            builder.AddAttribute(seq++, "src", audio.Url);
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+    };
+
+    static Color CapDoColor(short cap) => cap switch
+    {
+        1 => Color.Success,
+        2 => Color.Warning,
+        _ => Color.Error
+    };
+
+    static string CapDoLabel(short cap) => cap switch
+    {
+        1 => "Dễ",
+        2 => "Trung bình",
+        _ => "Khó"
+    };
+}
