@@ -25,6 +25,7 @@ public class ChiTietDeThiDto
     public bool LaCauNhom { get; set; }
     public List<ChiTietDeThiDto> CauHoiCons { get; set; } = [];
     public List<CauTraLoiDto> CauTraLois { get; set; } = [];
+    public List<FileDinhKemDto> Files { get; set; } = [];
 }
 
 public class SaveDeThiDto

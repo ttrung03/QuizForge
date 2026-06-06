@@ -3,6 +3,7 @@
 @using QuestionBank.Web.Application.Services
 @inject CauHoiService CauHoiService
 @inject ISnackbar Snackbar
+@inject IWebHostEnvironment Env
 
 <MudDialog>
     <DialogContent>
@@ -36,9 +37,8 @@
                     </div>
                     @foreach (var f in CauHoi.Files.Where(f => f.LoaiFile == 2))
                     {
-                        <audio controls style="height:36px;width:100%;margin-top:4px">
-                            <source src="@f.Url" />
-                        </audio>
+                        <AudioReplaceRow Audio="@f"
+                                         OnReplaced="@(updated => { f.TenFile = updated.TenFile; StateHasChanged(); })" />
                     }
                 </MudItem>
             }

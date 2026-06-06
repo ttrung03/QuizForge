@@ -12,4 +12,5 @@ public interface ICauHoiRepository
     Task SoftDeleteAsync(Guid id);
     Task UpdateAsync(Guid maCauHoi, string noiDung, short capDo, List<(Guid id, string noiDung, bool laDapAn)> answers);
     Task UpdateCauTraLoiThuTuAsync(List<(Guid maCauTraLoi, int thuTu)> orders);
+    Task ReplaceAudioAsync(Guid maFile, string newTenFile);
 }

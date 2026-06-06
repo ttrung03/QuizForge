@@ -1,11 +1,13 @@
 @using MudBlazor
 @using QuestionBank.Web.Application.DTOs
 @using QuestionBank.Web.Application.Services
+@using Microsoft.AspNetCore.Hosting
 @inject CauHoiService CauHoiService
 @inject DeThiService DeThiService
 @inject PhanService PhanService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IWebHostEnvironment Env
 
 <MudDialog Style="max-width:860px">
     <TitleContent>
@@ -138,6 +140,12 @@
                                               Variant="Variant.Outlined"
                                               Lines="6"
                                               Class="mb-2" />
+                                @* Audio edit section *@
+                                @foreach (var audioFile in cauHoi.Files.Where(f => f.LoaiFile == 2))
+                                {
+                                    <AudioReplaceRow Audio="@audioFile"
+                                                     OnReplaced="@(updated => { audioFile.TenFile = updated.TenFile; StateHasChanged(); })" />
+                                }
                                 <div class="d-flex gap-2 mt-2">
                                     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                                Size="Size.Small"
@@ -163,6 +171,10 @@
                                         <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-top:4px">
                                             @cauHoi.NoiDung
                                         </MudText>
+                                        @if (cauHoi.Files.Count > 0)
+                                        {
+                                            @RenderMedia(cauHoi.Files)
+                                        }
                                     </div>
                                     <MudTooltip Text="Chỉnh sửa đoạn văn nhóm">
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
@@ -242,6 +254,10 @@
                                             <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
                                                 @con.NoiDung
                                             </MudText>
+                                            @if (con.Files.Count > 0)
+                                            {
+                                                @RenderMedia(con.Files)
+                                            }
                                             <div class="pl-2">
                                                 @for (int i = 0; i < con.CauTraLois.Count; i++)
                                                 {
@@ -320,6 +336,11 @@
                                               Variant="Variant.Outlined"
                                               Lines="3"
                                               Class="mb-2" />
+                                @foreach (var audioFile in cauHoi.Files.Where(f => f.LoaiFile == 2))
+                                {
+                                    <AudioReplaceRow Audio="@audioFile"
+                                                     OnReplaced="@(updated => { audioFile.TenFile = updated.TenFile; StateHasChanged(); })" />
+                                }
                                 <MudSelect T="short" @bind-Value="_editCapDo"
                                            Label="Cấp độ"
                                            Variant="Variant.Outlined"
@@ -372,6 +393,10 @@
                                     <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
                                         @cauHoi.NoiDung
                                     </MudText>
+                                    @if (cauHoi.Files.Count > 0)
+                                    {
+                                        @RenderMedia(cauHoi.Files)
+                                    }
                                     <div class="pl-2">
                                         @for (int i = 0; i < cauHoi.CauTraLois.Count; i++)
                                         {
@@ -549,6 +574,20 @@
     </DialogActions>
 </MudDialog>
 
+@* ── Lightbox ── *@
+@if (_lightboxUrl != null)
+{
+    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
+         @onclick="() => _lightboxUrl = null">
+        <img src="@_lightboxUrl"
+             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 48px rgba(0,0,0,0.6)"
+             alt="Xem ảnh"
+             @onclick:stopPropagation />
+        <div style="position:absolute;top:16px;right:24px;color:#fff;font-size:28px;cursor:pointer;opacity:0.8"
+             @onclick="() => _lightboxUrl = null">✕</div>
+    </div>
+}
+
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public DeThiDto DeThi { get; set; } = null!;
@@ -559,6 +598,7 @@
     bool _shuffleQuestions = false;
     bool _shuffleAnswers   = false;
 
+    string? _lightboxUrl;
     List<ChiTietDeThiDto> _displayItems = [];
 
     // ── Edit state ────────────────────────────────────────────────────────────
@@ -950,6 +990,7 @@
         NoiDung    = src.NoiDung,
         CapDo      = src.CapDo,
         LaCauNhom  = src.LaCauNhom,
+        Files      = src.Files.Select(f => new FileDinhKemDto { MaFile = f.MaFile, LoaiFile = f.LoaiFile, TenFile = f.TenFile }).ToList(),
         CauTraLois = src.CauTraLois.Select(a => new CauTraLoiDto
         {
             MaCauTraLoi = a.MaCauTraLoi,
@@ -968,6 +1009,7 @@
             NoiDung    = c.NoiDung,
             CapDo      = c.CapDo,
             LaCauNhom  = c.LaCauNhom,
+            Files      = c.Files.Select(f => new FileDinhKemDto { MaFile = f.MaFile, LoaiFile = f.LoaiFile, TenFile = f.TenFile }).ToList(),
             CauTraLois = c.CauTraLois.Select(a => new CauTraLoiDto
             {
                 MaCauTraLoi = a.MaCauTraLoi,
@@ -978,6 +1020,65 @@
             }).ToList(),
             CauHoiCons = []
         }).ToList()
+    };
+
+    private RenderFragment RenderMedia(List<FileDinhKemDto> files) => builder =>
+    {
+        var images = files.Where(f => f.LoaiFile == 1).ToList();
+        var audios = files.Where(f => f.LoaiFile == 2).ToList();
+        int seq = 0;
+
+        if (images.Count > 0)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "style", "display:flex;flex-wrap:wrap;gap:8px;margin:8px 0");
+            foreach (var img in images)
+            {
+                builder.OpenElement(seq++, "div");
+                builder.AddAttribute(seq++, "style", "position:relative;display:inline-block");
+                builder.OpenElement(seq++, "img");
+                builder.AddAttribute(seq++, "src", img.Url);
+                builder.AddAttribute(seq++, "alt", img.TenFile);
+                builder.AddAttribute(seq++, "title", img.TenFile);
+                builder.AddAttribute(seq++, "style",
+                    "height:90px;max-width:140px;object-fit:contain;border:1px solid #ddd;border-radius:6px;cursor:zoom-in;background:#f9f9f9;padding:2px;transition:box-shadow 0.2s");
+                builder.AddAttribute(seq++, "onclick",
+                    EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                        this, () => _lightboxUrl = img.Url));
+                builder.CloseElement(); // img
+                builder.CloseElement(); // div wrapper
+            }
+            builder.CloseElement(); // flex div
+        }
+
+        if (audios.Count > 0)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "style", "display:flex;flex-direction:column;gap:6px;margin:8px 0");
+            foreach (var audio in audios)
+            {
+                builder.OpenElement(seq++, "div");
+                builder.AddAttribute(seq++, "style",
+                    "display:flex;align-items:center;gap:8px;background:#f3f3f3;border-radius:8px;padding:6px 10px;border:1px solid #e0e0e0");
+                builder.OpenElement(seq++, "span");
+                builder.AddAttribute(seq++, "style", "font-size:18px");
+                builder.AddContent(seq++, "🎵");
+                builder.CloseElement();
+                builder.OpenElement(seq++, "audio");
+                builder.AddAttribute(seq++, "controls", true);
+                builder.AddAttribute(seq++, "style", "height:32px;flex:1;min-width:0");
+                builder.OpenElement(seq++, "source");
+                builder.AddAttribute(seq++, "src", audio.Url);
+                builder.CloseElement();
+                builder.CloseElement(); // audio
+                builder.OpenElement(seq++, "span");
+                builder.AddAttribute(seq++, "style", "font-size:12px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px");
+                builder.AddContent(seq++, audio.TenFile);
+                builder.CloseElement();
+                builder.CloseElement(); // row div
+            }
+            builder.CloseElement(); // column div
+        }
     };
 
     private static string Truncate(string s, int max)

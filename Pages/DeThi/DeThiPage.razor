@@ -177,10 +177,22 @@ else
                                             <tr style="background:#f0f4ff; border-left:3px solid #5c6bc0">
                                                 <td style="padding:6px 8px; color:#888; font-style:italic" colspan="1"></td>
                                                 <td style="padding:6px 8px" colspan="3">
-                                                    <span style="font-size:11px; font-weight:600; color:#5c6bc0; text-transform:uppercase; letter-spacing:0.5px">
-                                                        Nhóm câu hỏi (@cauHoi.CauHoiCons.Count câu con)
-                                                    </span>
-                                                    <div style="margin-top:2px; white-space:normal">
+                                                    <div class="d-flex align-center gap-1 mb-1">
+                                                        <span style="font-size:11px; font-weight:600; color:#5c6bc0; text-transform:uppercase; letter-spacing:0.5px">
+                                                            Nhóm câu hỏi (@cauHoi.CauHoiCons.Count câu con)
+                                                        </span>
+                                                        @if (cauHoi.Files.Any(f => f.LoaiFile == 1))
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Color="Color.Info"
+                                                                     Style="font-size:14px" title="Có hình ảnh" />
+                                                        }
+                                                        @if (cauHoi.Files.Any(f => f.LoaiFile == 2))
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" Color="Color.Secondary"
+                                                                     Style="font-size:14px" title="Có âm thanh" />
+                                                        }
+                                                    </div>
+                                                    <div style="white-space:normal">
                                                         @Truncate(cauHoi.NoiDung ?? "", 200)
                                                     </div>
                                                 </td>
@@ -197,7 +209,17 @@ else
                                                 <tr style="border-bottom:1px solid #f0f0f0; border-left:3px solid #c5cae9">
                                                     <td style="padding:5px 8px 5px 20px; color:#666">@stt</td>
                                                     <td style="padding:5px 8px 5px 20px; white-space:normal">
-                                                        @Truncate(con.NoiDung ?? "", 120)
+                                                        <span>@Truncate(con.NoiDung ?? "", 120)</span>
+                                                        @if (con.Files.Any(f => f.LoaiFile == 1))
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Color="Color.Info"
+                                                                     Style="font-size:13px;vertical-align:middle;margin-left:4px" Title="Có hình ảnh" />
+                                                        }
+                                                        @if (con.Files.Any(f => f.LoaiFile == 2))
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" Color="Color.Secondary"
+                                                                     Style="font-size:13px;vertical-align:middle;margin-left:2px" Title="Có âm thanh" />
+                                                        }
                                                     </td>
                                                     <td style="padding:5px 8px; color:#2e7d32; font-weight:500">@lblCon</td>
                                                     <td style="padding:5px 8px">
@@ -220,7 +242,17 @@ else
                                             <tr style="border-bottom:1px solid #f0f0f0">
                                                 <td style="padding:6px 8px">@stt</td>
                                                 <td style="padding:6px 8px; white-space:normal">
-                                                    @Truncate(cauHoi.NoiDung ?? "", 120)
+                                                    <span>@Truncate(cauHoi.NoiDung ?? "", 120)</span>
+                                                    @if (cauHoi.Files.Any(f => f.LoaiFile == 1))
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Color="Color.Info"
+                                                                 Style="font-size:13px;vertical-align:middle;margin-left:4px" Title="Có hình ảnh" />
+                                                    }
+                                                    @if (cauHoi.Files.Any(f => f.LoaiFile == 2))
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" Color="Color.Secondary"
+                                                                 Style="font-size:13px;vertical-align:middle;margin-left:2px" Title="Có âm thanh" />
+                                                    }
                                                 </td>
                                                 <td style="padding:6px 8px; color:#2e7d32; font-weight:500">@lbl</td>
                                                 <td style="padding:6px 8px">

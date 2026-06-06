@@ -95,6 +95,14 @@ public class CauHoiRepository(QuestionBankDbContext context) : ICauHoiRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task ReplaceAudioAsync(Guid maFile, string newTenFile)
+    {
+        var file = await context.Files.FindAsync(maFile);
+        if (file is null) return;
+        file.TenFile = newTenFile;
+        await context.SaveChangesAsync();
+    }
+
     public async Task SoftDeleteAsync(Guid id)
     {
         var cauHoi = await context.CauHois
