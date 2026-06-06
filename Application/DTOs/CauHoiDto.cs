@@ -11,8 +11,27 @@ public class CauHoiDto
     public int SoCauHoiCon { get; set; }
     public List<CauTraLoiDto> CauTraLois { get; set; } = [];
     public List<CauHoiDto> CauHoiCons { get; set; } = [];
+    public List<FileDinhKemDto> Files { get; set; } = [];
 
     public bool LaCauNhom => SoCauHoiCon > 0;
+}
+
+public class FileDinhKemDto
+{
+    public Guid MaFile { get; set; }
+    /// <summary>1 = Hình ảnh, 2 = Âm thanh</summary>
+    public int LoaiFile { get; set; }
+    public string TenFile { get; set; } = string.Empty;
+    /// <summary>URL tương đối để trình duyệt tải file (ví dụ /uploads/images/abc.png)</summary>
+    public string Url => LoaiFile == 1
+        ? $"/uploads/images/{NormalizeName("images/", TenFile)}"
+        : $"/uploads/audio/{NormalizeName("audio/", TenFile)}";
+
+    private static string NormalizeName(string prefix, string name)
+    {
+        name = name.Trim(']', '[', ' ');
+        return name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? name[prefix.Length..] : name;
+    }
 }
 
 public class CauTraLoiDto

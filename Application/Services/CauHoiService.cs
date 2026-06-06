@@ -34,7 +34,15 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
         CauHoiCons  = c.CauHoiCons
             .OrderBy(con => con.MaSoCauHoi)
             .Select(MapToDto)
-            .ToList()
+            .ToList(),
+        Files = c.Files
+            .Where(f => f.LoaiFile.HasValue && f.TenFile != null)
+            .Select(f => new FileDinhKemDto
+            {
+                MaFile   = f.MaFile,
+                LoaiFile = f.LoaiFile!.Value,
+                TenFile  = f.TenFile!
+            }).ToList()
     };
 
     /// <summary>Parse stream .docx và trả về danh sách câu hỏi + nhóm + cảnh báo để preview.</summary>
@@ -59,6 +67,7 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
 
         var allCauHois    = new List<CauHoi>();
         var allCauTraLois = new List<CauTraLoi>();
+        var allFiles      = new List<FileDinhKem>();
 
         // Câu hỏi đơn
         foreach (var q in questions)
@@ -78,6 +87,7 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
             };
             allCauHois.Add(cauHoi);
             allCauTraLois.AddRange(MapAnswers(q.Answers, cauHoi.MaCauHoi));
+            allFiles.AddRange(MapFiles(q.AnhFiles, q.AmThanhFiles, cauHoi.MaCauHoi));
         }
 
         // Câu hỏi nhóm — kiểm tra theo nội dung passage của nhóm
@@ -103,6 +113,7 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
                 NgayTao     = now
             };
             allCauHois.Add(parent);
+            allFiles.AddRange(MapFiles(group.AnhFiles, group.AmThanhFiles, parentId));
 
             foreach (var sub in validSubs)
             {
@@ -120,11 +131,12 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
                 };
                 allCauHois.Add(child);
                 allCauTraLois.AddRange(MapAnswers(sub.Answers, child.MaCauHoi));
+                allFiles.AddRange(MapFiles(sub.AnhFiles, sub.AmThanhFiles, child.MaCauHoi));
             }
         }
 
         if (allCauHois.Count > 0)
-            await repo.BulkImportAsync(allCauHois, allCauTraLois);
+            await repo.BulkImportAsync(allCauHois, allCauTraLois, allFiles);
 
         int imported = allCauHois.Count;
         return (imported, skipped);
@@ -144,6 +156,9 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
     public async Task DeleteAsync(Guid id)
         => await repo.SoftDeleteAsync(id);
 
+    public async Task ReplaceAudioAsync(Guid maFile, string newTenFile)
+        => await repo.ReplaceAudioAsync(maFile, newTenFile);
+
     private static List<CauTraLoi> MapAnswers(List<ImportCauTraLoiDto> src, Guid maCauHoi)
         => src.Select(a => new CauTraLoi
         {
@@ -154,4 +169,14 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
             LaDapAn     = a.LaDapAn,
             HoanVi      = a.HoanVi
         }).ToList();
+
+    private static List<FileDinhKem> MapFiles(List<string> anhFiles, List<string> amThanhFiles, Guid maCauHoi)
+    {
+        var result = new List<FileDinhKem>();
+        foreach (var f in anhFiles.Where(f => !string.IsNullOrWhiteSpace(f)))
+            result.Add(new FileDinhKem { MaFile = Guid.NewGuid(), MaCauHoi = maCauHoi, TenFile = f.Trim(), LoaiFile = 1 });
+        foreach (var f in amThanhFiles.Where(f => !string.IsNullOrWhiteSpace(f)))
+            result.Add(new FileDinhKem { MaFile = Guid.NewGuid(), MaCauHoi = maCauHoi, TenFile = f.Trim(), LoaiFile = 2 });
+        return result;
+    }
 }

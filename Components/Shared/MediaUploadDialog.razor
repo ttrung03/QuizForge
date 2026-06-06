@@ -1,0 +1,372 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Hosting
+@using System.IO.Compression
+@inject IWebHostEnvironment Env
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width:660px; max-height:90vh">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PermMedia" Class="mr-2" />
+            Quản lý file Media (Hình ảnh & Âm thanh)
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+    <div style="overflow-y:auto; max-height:calc(90vh - 160px); padding-right:4px">
+
+        @* ── Upload ZIP ── *@
+        <MudPaper Outlined="true" Class="pa-3 mb-3" Style="border-style:dashed">
+            <MudText Typo="Typo.subtitle2" Class="mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.FolderZip" Size="Size.Small" Class="mr-1" />
+                Upload file .zip (tự động phân loại ảnh / audio)
+            </MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2">
+                Ảnh: .png .jpg .jpeg .gif .webp .bmp → thư mục <b>images/</b> &nbsp;|&nbsp;
+                Audio: .mp3 .wav .ogg .m4a .aac → thư mục <b>audio/</b>
+            </MudText>
+
+            <div class="d-flex align-center gap-3 flex-wrap">
+                <MudFileUpload T="IBrowserFile" Accept=".zip" FilesChanged="OnZipSelected">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.FolderZip"
+                                   Color="Color.Primary">
+                            @(_selectedZip is null ? "Chọn file .zip" : _selectedZip.Name)
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+
+                @if (_selectedZip is not null)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Unarchive"
+                               Disabled="_extracting"
+                               OnClick="ExtractZip">
+                        @if (_extracting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Đang giải nén...</span>
+                        }
+                        else
+                        {
+                            <span>Giải nén & Upload</span>
+                        }
+                    </MudButton>
+                }
+            </div>
+
+            @if (_zipResult is not null)
+            {
+                <MudAlert Severity="@_zipResult.Severity" Dense="true" Class="mt-2">
+                    @_zipResult.Message
+                    @if (_zipResult.Skipped.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mt-1">
+                            Bỏ qua (@_zipResult.Skipped.Count): @string.Join(", ", _zipResult.Skipped.Take(5))
+                            @(_zipResult.Skipped.Count > 5 ? $" +{_zipResult.Skipped.Count - 5} file khác" : "")
+                        </MudText>
+                    }
+                </MudAlert>
+            }
+        </MudPaper>
+
+        <MudDivider Class="my-3" />
+
+        @* ── Upload lẻ ── *@
+        <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">Hoặc upload từng file</MudText>
+
+        <MudGrid Spacing="2" Class="mb-2">
+            <MudItem xs="12" sm="5">
+                <MudSelect @bind-Value="_loaiFile" Label="Loại file" Variant="Variant.Outlined" Dense="true">
+                    <MudSelectItem Value="1">Hình ảnh (.png .jpg .gif ...)</MudSelectItem>
+                    <MudSelectItem Value="2">Âm thanh (.mp3 .wav .ogg ...)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="7" Class="d-flex align-end gap-2">
+                <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                               Accept="@AcceptTypes"
+                               FilesChanged="OnFilesSelected"
+                               MaximumFileCount="50">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.AttachFile"
+                                   Color="Color.Default">
+                            @(_selectedFiles.Count == 0 ? "Chọn file(s)" : $"Đã chọn {_selectedFiles.Count} file")
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+
+                @if (_selectedFiles.Count > 0)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                               Disabled="_uploading"
+                               OnClick="UploadFiles">
+                        @if (_uploading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        <span>Upload</span>
+                    </MudButton>
+                }
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-3" />
+
+        @* ── Danh sách file đã có ── *@
+        <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">File đã lưu trên server</MudText>
+
+        <MudTabs Elevation="0" Rounded="true">
+            <MudTabPanel Text="@($"Hình ảnh ({_imageFiles.Count})")" Icon="@Icons.Material.Filled.Image">
+                @if (_imageFiles.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary pa-2">Chưa có file hình ảnh.</MudText>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2 pa-1">
+                        @foreach (var f in _imageFiles)
+                        {
+                            <MudPaper Outlined="true" Class="pa-2" Style="width:140px;text-align:center">
+                                <img src="@($"/uploads/images/{f}")"
+                                     alt="@f"
+                                     style="max-width:120px;max-height:90px;object-fit:contain;display:block;margin:auto" />
+                                <MudText Typo="Typo.caption" Style="word-break:break-all;font-size:10px">@f</MudText>
+                                <MudTooltip Text="@($"[<img>{f}</img>]")">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => ShowCopyHint(f, 1))" />
+                                </MudTooltip>
+                            </MudPaper>
+                        }
+                    </div>
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="@($"Âm thanh ({_audioFiles.Count})")" Icon="@Icons.Material.Filled.Audiotrack">
+                @if (_audioFiles.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary pa-2">Chưa có file âm thanh.</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var f in _audioFiles)
+                        {
+                            <MudListItem>
+                                <div class="d-flex align-center gap-2 flex-wrap" style="width:100%">
+                                    <MudIcon Icon="@Icons.Material.Filled.AudioFile" Size="Size.Small" />
+                                    <MudText Typo="Typo.body2" Style="min-width:120px;max-width:200px;word-break:break-all">@f</MudText>
+                                    <audio controls style="height:32px;flex:1;min-width:160px;max-width:260px">
+                                        <source src="@($"/uploads/audio/{f}")" />
+                                    </audio>
+                                    <MudTooltip Text="@($"[<audio>{f}</audio>]")">
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => ShowCopyHint(f, 2))" />
+                                    </MudTooltip>
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudTabPanel>
+        </MudTabs>
+
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3" Icon="@Icons.Material.Filled.Info">
+            Dùng trong file Word:&nbsp;
+            <code>[&lt;img&gt;tên_file.png&lt;/img&gt;]</code>&nbsp;hoặc&nbsp;
+            <code>[&lt;audio&gt;tên_file.mp3&lt;/audio&gt;]</code>
+        </MudAlert>
+
+    </div>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Text">Đóng</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    // ZIP
+    IBrowserFile? _selectedZip;
+    bool _extracting = false;
+    ZipResultInfo? _zipResult;
+
+    // Upload lẻ
+    int _loaiFile = 1;
+    List<IBrowserFile> _selectedFiles = [];
+    bool _uploading = false;
+
+    // Danh sách
+    List<string> _imageFiles = [];
+    List<string> _audioFiles = [];
+
+    static readonly HashSet<string> ImageExts  = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"];
+    static readonly HashSet<string> AudioExts  = [".mp3", ".wav", ".ogg", ".m4a", ".aac"];
+
+    string AcceptTypes => _loaiFile == 1
+        ? ".png,.jpg,.jpeg,.gif,.webp,.bmp"
+        : ".mp3,.wav,.ogg,.m4a,.aac";
+
+    protected override void OnInitialized() => LoadFileList();
+
+    private void LoadFileList()
+    {
+        var imgDir   = Path.Combine(Env.WebRootPath, "uploads", "images");
+        var audioDir = Path.Combine(Env.WebRootPath, "uploads", "audio");
+
+        _imageFiles = Directory.Exists(imgDir)
+            ? [.. Directory.GetFiles(imgDir)
+                .Select(Path.GetFileName)
+                .Where(f => f != null && !f!.StartsWith('.'))
+                .Select(f => f!)
+                .OrderBy(f => f)]
+            : [];
+
+        _audioFiles = Directory.Exists(audioDir)
+            ? [.. Directory.GetFiles(audioDir)
+                .Select(Path.GetFileName)
+                .Where(f => f != null && !f!.StartsWith('.'))
+                .Select(f => f!)
+                .OrderBy(f => f)]
+            : [];
+    }
+
+    // ── ZIP ──────────────────────────────────────────────────────────────────
+
+    private void OnZipSelected(IBrowserFile file)
+    {
+        _selectedZip = file;
+        _zipResult   = null;
+    }
+
+    private async Task ExtractZip()
+    {
+        if (_selectedZip is null) return;
+        _extracting = true;
+        _zipResult  = null;
+
+        var imgDir   = Path.Combine(Env.WebRootPath, "uploads", "images");
+        var audioDir = Path.Combine(Env.WebRootPath, "uploads", "audio");
+        Directory.CreateDirectory(imgDir);
+        Directory.CreateDirectory(audioDir);
+
+        int savedImg = 0, savedAudio = 0, skippedCount = 0;
+        var skipped = new List<string>();
+
+        try
+        {
+            // Phải copy vào MemoryStream trước — ZipArchive không hỗ trợ đọc đồng bộ từ browser stream
+            await using var browserStream = _selectedZip.OpenReadStream(maxAllowedSize: 200 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await browserStream.CopyToAsync(ms);
+            ms.Position = 0;
+            using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
+
+            foreach (var entry in zip.Entries)
+            {
+                // Bỏ qua thư mục và file ẩn
+                if (entry.Name.Length == 0 || entry.Name.StartsWith('.')) continue;
+
+                var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
+                string? destDir = null;
+
+                if (ImageExts.Contains(ext))       destDir = imgDir;
+                else if (AudioExts.Contains(ext))  destDir = audioDir;
+                else
+                {
+                    skipped.Add(entry.Name);
+                    skippedCount++;
+                    continue;
+                }
+
+                var safeName = Path.GetFileName(entry.Name);
+                var destPath = Path.Combine(destDir, safeName);
+
+                await using var entryStream = entry.Open();
+                await using var fs = new FileStream(destPath, FileMode.Create);
+                await entryStream.CopyToAsync(fs);
+
+                if (destDir == imgDir) savedImg++;
+                else                   savedAudio++;
+            }
+
+            LoadFileList();
+
+            var msg = $"Giải nén xong: {savedImg} hình ảnh, {savedAudio} âm thanh.";
+            if (skippedCount > 0) msg += $" Bỏ qua {skippedCount} file không hỗ trợ.";
+
+            _zipResult = new ZipResultInfo(
+                skippedCount == 0 ? Severity.Success : Severity.Warning,
+                msg, skipped);
+
+            _selectedZip = null;
+        }
+        catch (Exception ex)
+        {
+            _zipResult = new ZipResultInfo(Severity.Error, $"Lỗi giải nén: {ex.Message}", []);
+        }
+        finally
+        {
+            _extracting = false;
+        }
+    }
+
+    // ── Upload lẻ ────────────────────────────────────────────────────────────
+
+    private void OnFilesSelected(IReadOnlyList<IBrowserFile> files)
+        => _selectedFiles = files.ToList();
+
+    private async Task UploadFiles()
+    {
+        if (_selectedFiles.Count == 0) return;
+        _uploading = true;
+
+        var subFolder = _loaiFile == 1 ? "images" : "audio";
+        var destDir   = Path.Combine(Env.WebRootPath, "uploads", subFolder);
+        Directory.CreateDirectory(destDir);
+
+        int saved = 0, failed = 0;
+        foreach (var file in _selectedFiles)
+        {
+            try
+            {
+                var safeName = Path.GetFileName(file.Name);
+                var destPath = Path.Combine(destDir, safeName);
+                await using var fs  = new FileStream(destPath, FileMode.Create);
+                await using var src = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+                await src.CopyToAsync(fs);
+                saved++;
+            }
+            catch { failed++; }
+        }
+
+        _selectedFiles = [];
+        LoadFileList();
+        _uploading = false;
+
+        if (failed == 0)
+            Snackbar.Add($"Upload thành công {saved} file.", Severity.Success);
+        else
+            Snackbar.Add($"Upload xong: {saved} thành công, {failed} thất bại.", Severity.Warning);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private void ShowCopyHint(string fileName, int loai)
+    {
+        var marker = loai == 1 ? $"[<img>{fileName}</img>]" : $"[<audio>{fileName}</audio>]";
+        Snackbar.Add($"Marker: {marker}", Severity.Info, cfg => cfg.VisibleStateDuration = 5000);
+    }
+
+    private void Close() => MudDialog.Close();
+
+    record ZipResultInfo(Severity Severity, string Message, List<string> Skipped);
+}

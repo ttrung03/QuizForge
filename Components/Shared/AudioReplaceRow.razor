@@ -1,0 +1,230 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment Env
+@inject CauHoiService CauHoiService
+@inject ISnackbar Snackbar
+
+<div style="margin:6px 0 10px">
+    @* Current audio row *@
+    <div style="display:flex;align-items:center;gap:8px;background:#f3f3f3;border-radius:8px;padding:6px 10px;border:1px solid #e0e0e0">
+        <span style="font-size:18px">🎵</span>
+        <audio controls style="height:32px;flex:1;min-width:0" @key="_audioKey">
+            <source src="@Audio.Url" />
+        </audio>
+        <span style="font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;max-width:100px;white-space:nowrap">
+            @Audio.TenFile
+        </span>
+        <MudIconButton Icon="@(_showReplace ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.SwapHoriz)"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       title="Đổi audio"
+                       OnClick="ToggleReplace" />
+    </div>
+
+    @* Replace panel *@
+    @if (_showReplace)
+    {
+        <div style="background:#fff8e1;border:1px dashed #f9a825;border-radius:6px;padding:10px 12px;margin-top:4px">
+            <div style="font-size:12px;font-weight:600;color:#f57f17;margin-bottom:10px">
+                Đổi audio — chọn file đã upload hoặc upload file mới
+            </div>
+
+            @* Tab selector *@
+            <div style="display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid #ffe082">
+                <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_tab==0?"700":"400");background:@(_tab==0?"#ffe082":"transparent");color:@(_tab==0?"#e65100":"#888")"
+                        @onclick="@(() => { _tab = 0; _selectedFile = null; })">
+                    Chọn từ thư viện
+                </button>
+                <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_tab==1?"700":"400");background:@(_tab==1?"#ffe082":"transparent");color:@(_tab==1?"#e65100":"#888")"
+                        @onclick="@(() => { _tab = 1; _selectedExisting = null; })">
+                    Upload file mới
+                </button>
+            </div>
+
+            @* Tab 0: pick from existing *@
+            @if (_tab == 0)
+            {
+                @if (_existingFiles.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Chưa có file audio trên server.</MudText>
+                }
+                else
+                {
+                    <div style="max-height:180px;overflow-y:auto;border:1px solid #ffe082;border-radius:4px;background:#fffde7">
+                        @foreach (var f in _existingFiles)
+                        {
+                            var isSelected = _selectedExisting == f;
+                            <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;border-bottom:1px solid #fff9c4;background:@(isSelected?"#ffe082":"transparent")"
+                                 @onclick="@(() => _selectedExisting = f)">
+                                <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small"
+                                         Style="@($"color:{(isSelected ? "#e65100" : "#aaa")}")" />
+                                <span style="font-size:13px;flex:1">@f</span>
+                                @if (isSelected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small"
+                                             Style="color:#43a047" />
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (_selectedExisting is not null)
+                    {
+                        <div style="margin-top:6px">
+                            <audio controls style="height:30px;width:100%">
+                                <source src="/uploads/audio/@_selectedExisting" />
+                            </audio>
+                        </div>
+                    }
+                }
+
+                <div class="d-flex gap-2 mt-2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Warning"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Check"
+                               Disabled="@(_selectedExisting is null || _uploading)"
+                               OnClick="ApplyExistingAsync">
+                        @(_uploading ? "Đang lưu…" : "Dùng file này")
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ToggleReplace">Hủy</MudButton>
+                </div>
+            }
+
+            @* Tab 1: upload new file *@
+            @if (_tab == 1)
+            {
+                <div class="d-flex align-center gap-2 flex-wrap">
+                    <MudFileUpload T="IBrowserFile"
+                                   Accept=".mp3,.wav,.ogg,.m4a,.aac"
+                                   FilesChanged="OnFileSelected">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.AudioFile"
+                                       Color="Color.Warning"
+                                       Size="Size.Small">
+                                @(_selectedFile is null ? "Chọn file audio" : _selectedFile.Name)
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
+
+                    @if (_selectedFile is not null)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                                   Disabled="_uploading"
+                                   OnClick="UploadAsync">
+                            @if (_uploading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                            }
+                            <span>@(_uploading ? "Đang lưu…" : "Upload & Lưu")</span>
+                        </MudButton>
+                    }
+
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ToggleReplace">Hủy</MudButton>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FileDinhKemDto Audio { get; set; } = null!;
+    [Parameter] public EventCallback<FileDinhKemDto> OnReplaced { get; set; }
+
+    bool _showReplace = false;
+    int  _tab = 0;
+
+    // tab 0 — pick existing
+    List<string> _existingFiles  = [];
+    string?      _selectedExisting;
+
+    // tab 1 — upload new
+    IBrowserFile? _selectedFile;
+
+    bool   _uploading = false;
+    string _audioKey  = Guid.NewGuid().ToString();
+
+    void ToggleReplace()
+    {
+        _showReplace = !_showReplace;
+        if (_showReplace)
+            LoadExisting();
+        else
+        {
+            _selectedFile     = null;
+            _selectedExisting = null;
+        }
+    }
+
+    void LoadExisting()
+    {
+        var dir = Path.Combine(Env.WebRootPath, "uploads", "audio");
+        if (!Directory.Exists(dir)) { _existingFiles = []; return; }
+        _existingFiles = Directory.GetFiles(dir)
+            .Select(Path.GetFileName)
+            .Where(f => f is not null)
+            .Select(f => f!)
+            .OrderBy(f => f)
+            .ToList();
+    }
+
+    void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
+
+    async Task ApplyExistingAsync()
+    {
+        if (_selectedExisting is null) return;
+        _uploading = true;
+        try
+        {
+            await CauHoiService.ReplaceAudioAsync(Audio.MaFile, _selectedExisting);
+            Audio.TenFile     = _selectedExisting;
+            _audioKey         = Guid.NewGuid().ToString();
+            _showReplace      = false;
+            _selectedExisting = null;
+            Snackbar.Add($"Đã đổi audio thành \"{_selectedExisting}\".", Severity.Success);
+            await OnReplaced.InvokeAsync(Audio);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _uploading = false; }
+    }
+
+    async Task UploadAsync()
+    {
+        if (_selectedFile is null) return;
+        _uploading = true;
+        try
+        {
+            var safeName = Path.GetFileName(_selectedFile.Name);
+            var destDir  = Path.Combine(Env.WebRootPath, "uploads", "audio");
+            Directory.CreateDirectory(destDir);
+            var destPath = Path.Combine(destDir, safeName);
+
+            await using var fs  = new FileStream(destPath, FileMode.Create);
+            await using var src = _selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            await src.CopyToAsync(fs);
+
+            await CauHoiService.ReplaceAudioAsync(Audio.MaFile, safeName);
+
+            Audio.TenFile = safeName;
+            _audioKey     = Guid.NewGuid().ToString();
+            _showReplace  = false;
+            _selectedFile = null;
+
+            Snackbar.Add($"Đã thay thế audio bằng \"{safeName}\".", Severity.Success);
+            await OnReplaced.InvokeAsync(Audio);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi upload: {ex.Message}", Severity.Error);
+        }
+        finally { _uploading = false; }
+    }
+}
