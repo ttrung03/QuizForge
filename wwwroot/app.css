@@ -1,19 +1,19 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: #2563EB;
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: #2563EB;
+    border-color: #1D4ED8;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #3B82F6;
 }
 
 .content {
@@ -25,15 +25,15 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid #22c55e;
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    outline: 1px solid #ef4444;
 }
 
 .validation-message {
-    color: #e50000;
+    color: #ef4444;
 }
 
 .blazor-error-boundary {
@@ -57,4 +57,106 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/* ── Hero banner ─────────────────────────────────────────────────────────── */
+.hero-banner {
+    background: linear-gradient(135deg, #1E40AF 0%, #2563EB 50%, #0891B2 100%);
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 4px 24px rgba(37, 99, 235, .25);
+}
+
+/* ── Stat cards ──────────────────────────────────────────────────────────── */
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    transition: transform .15s ease, box-shadow .15s ease;
+    cursor: default;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.13);
+}
+
+.stat-card--blue   { background: linear-gradient(135deg,#2563EB,#3B82F6); color:#fff; }
+.stat-card--purple { background: linear-gradient(135deg,#7C3AED,#A78BFA); color:#fff; }
+.stat-card--teal   { background: linear-gradient(135deg,#0891B2,#22D3EE); color:#fff; }
+.stat-card--orange { background: linear-gradient(135deg,#EA580C,#FB923C); color:#fff; }
+
+.stat-card__icon {
+    opacity: .85;
+    flex-shrink: 0;
+}
+
+.stat-card__value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.stat-card__label {
+    font-size: .8rem;
+    opacity: .85;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+/* ── Difficulty bar ──────────────────────────────────────────────────────── */
+.diff-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #E2E8F0;
+}
+
+.diff-bar__segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .75rem;
+    font-weight: 600;
+    color: #fff;
+    transition: width .4s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    padding: 0 6px;
+}
+
+.diff-bar__segment--easy   { background: #22c55e; }
+.diff-bar__segment--medium { background: #f59e0b; }
+.diff-bar__segment--hard   { background: #ef4444; }
+
+/* ── Quick access cards ──────────────────────────────────────────────────── */
+.quick-card {
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease !important;
+}
+
+.quick-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.12) !important;
+}
+
+.quick-card__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ── Rounded helpers ─────────────────────────────────────────────────────── */
+.rounded-lg {
+    border-radius: 12px !important;
+    overflow: hidden;
 }
