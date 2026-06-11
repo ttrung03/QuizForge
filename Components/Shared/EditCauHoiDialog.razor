@@ -42,13 +42,20 @@
                 }
 
                 @* ── Thêm ảnh mới ── *@
-                <div class="mt-1">
+                <div class="mt-1 d-flex gap-2">
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
                                StartIcon="@(_showAddImage ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.AddPhotoAlternate)"
                                Color="Color.Primary"
-                               OnClick="@(() => { _showAddImage = !_showAddImage; if (_showAddImage) LoadImageLibrary(); })">
+                               OnClick="@(() => { _showAddImage = !_showAddImage; _showAddAudio = false; if (_showAddImage) LoadImageLibrary(); })">
                         Gắn ảnh mới
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               StartIcon="@(_showAddAudio ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.AudioFile)"
+                               Color="Color.Warning"
+                               OnClick="@(() => { _showAddAudio = !_showAddAudio; _showAddImage = false; if (_showAddAudio) LoadAudioLibrary(); })">
+                        Gắn audio mới
                     </MudButton>
                 </div>
 
@@ -156,6 +163,106 @@
                         }
                     </div>
                 }
+
+                @if (_showAddAudio)
+                {
+                    <div style="background:#fff8e1;border:1px dashed #f9a825;border-radius:6px;padding:10px 12px;margin-top:4px">
+                        <div style="font-size:12px;font-weight:600;color:#f57f17;margin-bottom:10px">
+                            Gắn âm thanh — chọn file đã upload hoặc upload file mới
+                        </div>
+
+                        <div style="display:flex;gap:0;margin-bottom:10px;border-bottom:2px solid #ffe082">
+                            <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_addAudioTab==0?"700":"400");background:@(_addAudioTab==0?"#ffe082":"transparent");color:@(_addAudioTab==0?"#e65100":"#888")"
+                                    @onclick="@(() => { _addAudioTab = 0; _addNewAudio = null; })">
+                                Chọn từ thư viện
+                            </button>
+                            <button style="padding:4px 14px;font-size:12px;border:none;cursor:pointer;border-radius:4px 4px 0 0;font-weight:@(_addAudioTab==1?"700":"400");background:@(_addAudioTab==1?"#ffe082":"transparent");color:@(_addAudioTab==1?"#e65100":"#888")"
+                                    @onclick="@(() => { _addAudioTab = 1; _addSelectedExistingAudio = null; })">
+                                Upload file mới
+                            </button>
+                        </div>
+
+                        @if (_addAudioTab == 0)
+                        {
+                            @if (_audioLibrary.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Chưa có file audio trên server.</MudText>
+                            }
+                            else
+                            {
+                                <div style="max-height:180px;overflow-y:auto;border:1px solid #ffe082;border-radius:4px;background:#fffde7">
+                                    @foreach (var f in _audioLibrary)
+                                    {
+                                        var isSelected = _addSelectedExistingAudio == f;
+                                        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;border-bottom:1px solid #fff9c4;background:@(isSelected?"#ffe082":"transparent")"
+                                             @onclick="@(() => _addSelectedExistingAudio = f)">
+                                            <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small"
+                                                     Style="@($"color:{(isSelected ? "#e65100" : "#aaa")}")" />
+                                            <span style="font-size:13px;flex:1">@f</span>
+                                            @if (isSelected)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color:#43a047" />
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                @if (_addSelectedExistingAudio is not null)
+                                {
+                                    <div style="margin-top:6px">
+                                        <audio controls style="height:30px;width:100%">
+                                            <source src="/uploads/audio/@_addSelectedExistingAudio" />
+                                        </audio>
+                                    </div>
+                                }
+                            }
+
+                            <div class="d-flex gap-2 mt-2">
+                                <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Check"
+                                           Disabled="@(_addSelectedExistingAudio is null || _addAudioSaving)"
+                                           OnClick="AddExistingAudioAsync">
+                                    @(_addAudioSaving ? "Đang lưu…" : "Gắn audio này")
+                                </MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           OnClick="@(() => _showAddAudio = false)">Hủy</MudButton>
+                            </div>
+                        }
+
+                        @if (_addAudioTab == 1)
+                        {
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <MudFileUpload T="IBrowserFile"
+                                               Accept=".mp3,.wav,.ogg,.m4a,.aac"
+                                               FilesChanged="@(f => _addNewAudio = f)">
+                                    <ActivatorContent>
+                                        <MudButton Variant="Variant.Outlined"
+                                                   StartIcon="@Icons.Material.Filled.AudioFile"
+                                                   Color="Color.Warning" Size="Size.Small">
+                                            @(_addNewAudio is null ? "Chọn file audio" : _addNewAudio.Name)
+                                        </MudButton>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+
+                                @if (_addNewAudio is not null)
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                                               Disabled="_addAudioSaving"
+                                               OnClick="UploadAndAddAudioAsync">
+                                        @if (_addAudioSaving)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                        }
+                                        <span>@(_addAudioSaving ? "Đang lưu…" : "Upload & Gắn")</span>
+                                    </MudButton>
+                                }
+
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           OnClick="@(() => _showAddAudio = false)">Hủy</MudButton>
+                            </div>
+                        }
+                    </div>
+                }
             </MudItem>
 
             @if (_answers.Count > 0)
@@ -208,6 +315,14 @@
     IBrowserFile? _addNewFile;
     bool   _addSaving          = false;
 
+    // Add audio panel
+    bool   _showAddAudio           = false;
+    int    _addAudioTab            = 0;
+    List<string> _audioLibrary     = [];
+    string? _addSelectedExistingAudio;
+    IBrowserFile? _addNewAudio;
+    bool   _addAudioSaving         = false;
+
     protected override void OnParametersSet()
     {
         _noiDung = CauHoi.NoiDung ?? "";
@@ -229,6 +344,18 @@
         var dir = Path.Combine(Env.WebRootPath, "uploads", "images");
         if (!Directory.Exists(dir)) { _imageLibrary = []; return; }
         _imageLibrary = Directory.GetFiles(dir)
+            .Select(Path.GetFileName)
+            .Where(f => f is not null)
+            .Select(f => f!)
+            .OrderBy(f => f)
+            .ToList();
+    }
+
+    private void LoadAudioLibrary()
+    {
+        var dir = Path.Combine(Env.WebRootPath, "uploads", "audio");
+        if (!Directory.Exists(dir)) { _audioLibrary = []; return; }
+        _audioLibrary = Directory.GetFiles(dir)
             .Select(Path.GetFileName)
             .Where(f => f is not null)
             .Select(f => f!)
@@ -290,6 +417,63 @@
             Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
         }
         finally { _addSaving = false; }
+    }
+
+    private async Task AddExistingAudioAsync()
+    {
+        if (_addSelectedExistingAudio is null) return;
+        _addAudioSaving = true;
+        try
+        {
+            var maFile = await CauHoiService.AddAudioAsync(CauHoi.MaCauHoi, _addSelectedExistingAudio);
+            CauHoi.Files.Add(new FileDinhKemDto
+            {
+                MaFile   = maFile,
+                LoaiFile = 2,
+                TenFile  = _addSelectedExistingAudio
+            });
+            var addedName = _addSelectedExistingAudio;
+            _showAddAudio             = false;
+            _addSelectedExistingAudio = null;
+            Snackbar.Add($"Đã gắn audio \"{addedName}\".", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally { _addAudioSaving = false; }
+    }
+
+    private async Task UploadAndAddAudioAsync()
+    {
+        if (_addNewAudio is null) return;
+        _addAudioSaving = true;
+        try
+        {
+            var safeName = Path.GetFileName(_addNewAudio.Name);
+            var dir      = Path.Combine(Env.WebRootPath, "uploads", "audio");
+            Directory.CreateDirectory(dir);
+
+            await using var fs  = new FileStream(Path.Combine(dir, safeName), FileMode.Create);
+            await using var src = _addNewAudio.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            await src.CopyToAsync(fs);
+
+            var maFile = await CauHoiService.AddAudioAsync(CauHoi.MaCauHoi, safeName);
+            CauHoi.Files.Add(new FileDinhKemDto
+            {
+                MaFile   = maFile,
+                LoaiFile = 2,
+                TenFile  = safeName
+            });
+            _showAddAudio = false;
+            _addNewAudio  = null;
+            Snackbar.Add($"Đã upload và gắn audio \"{safeName}\".", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi upload: {ex.Message}", Severity.Error);
+        }
+        finally { _addAudioSaving = false; }
     }
 
     private async Task SaveAsync()

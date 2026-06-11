@@ -184,9 +184,10 @@
             await CauHoiService.ReplaceAudioAsync(Audio.MaFile, _selectedExisting);
             Audio.TenFile     = _selectedExisting;
             _audioKey         = Guid.NewGuid().ToString();
+            var appliedName   = _selectedExisting;
             _showReplace      = false;
             _selectedExisting = null;
-            Snackbar.Add($"Đã đổi audio thành \"{_selectedExisting}\".", Severity.Success);
+            Snackbar.Add($"Đã đổi audio thành \"{appliedName}\".", Severity.Success);
             await OnReplaced.InvokeAsync(Audio);
         }
         catch (Exception ex)

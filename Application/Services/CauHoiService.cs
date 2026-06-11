@@ -4,7 +4,7 @@ using QuestionBank.Web.Domain.Entities;
 
 namespace QuestionBank.Web.Application.Services;
 
-public class CauHoiService(ICauHoiRepository repo, WordImportService importService)
+public class CauHoiService(ICauHoiRepository repo, WordImportService importService, DocImportService docImportService, ExcelImportService excelImportService)
 {
     public async Task<List<CauHoiDto>> GetByPhanAsync(Guid maPhan)
     {
@@ -48,6 +48,15 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
     /// <summary>Parse stream .docx và trả về danh sách câu hỏi + nhóm + cảnh báo để preview.</summary>
     public (List<ImportCauHoiDto> Questions, List<ImportCauHoiNhomDto> Groups, List<string> Warnings) ParseWordFile(Stream stream)
         => importService.Parse(stream);
+
+    /// <summary>Parse stream theo định dạng file (docx/doc/xlsx) và trả về kết quả preview.</summary>
+    public (List<ImportCauHoiDto> Questions, List<ImportCauHoiNhomDto> Groups, List<string> Warnings) ParseFile(Stream stream, string fileExtension)
+        => fileExtension.ToLowerInvariant() switch
+        {
+            ".doc"  => docImportService.Parse(stream),
+            ".xlsx" => excelImportService.Parse(stream),
+            _       => importService.Parse(stream)  // .docx và mặc định
+        };
 
     /// <summary>Lưu câu hỏi đơn và câu hỏi nhóm đã parse vào Phan được chọn.
     /// Toàn bộ thao tác được thực hiện trong một lần SaveChanges để đảm bảo atomic.
@@ -164,6 +173,9 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
 
     public async Task<Guid> AddImageAsync(Guid maCauHoi, string tenFile)
         => await repo.AddImageAsync(maCauHoi, tenFile);
+
+    public async Task<Guid> AddAudioAsync(Guid maCauHoi, string tenFile)
+        => await repo.AddAudioAsync(maCauHoi, tenFile);
 
     private static List<CauTraLoi> MapAnswers(List<ImportCauTraLoiDto> src, Guid maCauHoi)
         => src.Select(a => new CauTraLoi

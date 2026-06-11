@@ -15,4 +15,5 @@ public interface ICauHoiRepository
     Task ReplaceAudioAsync(Guid maFile, string newTenFile);
     Task ReplaceImageAsync(Guid maFile, string newTenFile);
     Task<Guid> AddImageAsync(Guid maCauHoi, string tenFile);
+    Task<Guid> AddAudioAsync(Guid maCauHoi, string tenFile);
 }
