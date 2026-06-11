@@ -44,6 +44,7 @@ public class WordImportService(IWebHostEnvironment env)
         List<string>         passageLines = [];
         List<string>         passageEmbeddedImages = [];
         ImportCauHoiDto?     currentSub   = null;
+        List<string>         pendingImages = []; // ảnh xuất hiện trước dòng CLO
 
         int paraIndex = 0;
 
@@ -87,8 +88,10 @@ public class WordImportService(IWebHostEnvironment env)
                         if (currentSub is not null) currentSub.AnhFiles.AddRange(imgs);
                         else currentGroup?.AnhFiles.AddRange(imgs);
                     }
+                    else if (current is not null)
+                        current.AnhFiles.AddRange(imgs);
                     else
-                        current?.AnhFiles.AddRange(imgs);
+                        pendingImages.AddRange(imgs); // ảnh trước CLO — giữ lại để gán sau
                 }
                 continue;
             }
@@ -161,7 +164,8 @@ public class WordImportService(IWebHostEnvironment env)
                 }
                 currentGroup = new ImportCauHoiNhomDto();
                 passageLines.Clear();
-                passageEmbeddedImages.Clear();
+                passageEmbeddedImages.AddRange(pendingImages);
+                pendingImages.Clear();
                 state = ParseState.CollectingPassage;
                 continue;
             }
@@ -184,6 +188,8 @@ public class WordImportService(IWebHostEnvironment env)
             {
                 var rawNoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim();
                 var (cleanNoiDung, anh, amThanh) = ExtractMedia(rawNoiDung);
+                anh.AddRange(pendingImages);
+                pendingImages.Clear();
                 anh.AddRange(SaveEmbeddedImages(para, mainPart!));
                 current = new ImportCauHoiDto
                 {
@@ -197,8 +203,11 @@ public class WordImportService(IWebHostEnvironment env)
 
             // Đoạn không phải CLO, không phải đáp án — có thể là đoạn ảnh độc lập
             var embNormal = SaveEmbeddedImages(para, mainPart!);
-            if (embNormal.Count > 0 && current is not null)
-                current.AnhFiles.AddRange(embNormal);
+            if (embNormal.Count > 0)
+            {
+                if (current is not null) current.AnhFiles.AddRange(embNormal);
+                else pendingImages.AddRange(embNormal);
+            }
 
             var match = AnswerLine.Match(text);
             if (match.Success && current is not null)

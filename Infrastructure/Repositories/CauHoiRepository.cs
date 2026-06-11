@@ -125,6 +125,20 @@ public class CauHoiRepository(QuestionBankDbContext context) : ICauHoiRepository
         return file.MaFile;
     }
 
+    public async Task<Guid> AddAudioAsync(Guid maCauHoi, string tenFile)
+    {
+        var file = new Domain.Entities.FileDinhKem
+        {
+            MaFile   = Guid.NewGuid(),
+            MaCauHoi = maCauHoi,
+            TenFile  = tenFile,
+            LoaiFile = 2
+        };
+        context.Files.Add(file);
+        await context.SaveChangesAsync();
+        return file.MaFile;
+    }
+
     public async Task SoftDeleteAsync(Guid id)
     {
         var cauHoi = await context.CauHois

@@ -165,6 +165,9 @@ public class CauHoiService(ICauHoiRepository repo, WordImportService importServi
     public async Task<Guid> AddImageAsync(Guid maCauHoi, string tenFile)
         => await repo.AddImageAsync(maCauHoi, tenFile);
 
+    public async Task<Guid> AddAudioAsync(Guid maCauHoi, string tenFile)
+        => await repo.AddAudioAsync(maCauHoi, tenFile);
+
     private static List<CauTraLoi> MapAnswers(List<ImportCauTraLoiDto> src, Guid maCauHoi)
         => src.Select(a => new CauTraLoi
         {
