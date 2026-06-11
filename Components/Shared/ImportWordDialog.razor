@@ -10,7 +10,7 @@
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Upload" Class="mr-2" />
-            Import câu hỏi từ file Word
+            Import câu hỏi từ file
         </MudText>
     </TitleContent>
 
@@ -64,18 +64,26 @@
 
         @* ── Bước 2: Upload file ── *@
         <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">
-            Bước 2 — Chọn file Word (.docx)
+            Bước 2 — Chọn file (.docx / .doc / .xlsx)
         </MudText>
 
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.TableChart">
+            <MudText Typo="Typo.caption">
+                <b>Template Excel (.xlsx):</b> Hàng 1 là tiêu đề. Từ hàng 2:
+                cột A = Nội dung câu hỏi, B/C/D/E = Đáp án A/B/C/D,
+                F = Đáp án đúng (A/B/C/D), G = Cấp độ (1-3), H = CLO (tuỳ chọn).
+            </MudText>
+        </MudAlert>
+
         <MudFileUpload T="IBrowserFile"
-                       Accept=".docx"
+                       Accept=".docx,.doc,.xlsx"
                        FilesChanged="OnFileSelected"
                        Class="mb-2">
             <ActivatorContent>
                 <MudButton Variant="Variant.Outlined"
                            StartIcon="@Icons.Material.Filled.AttachFile"
                            Color="Color.Primary">
-                    @(_selectedFile is null ? "Chọn file .docx" : _selectedFile.Name)
+                    @(_selectedFile is null ? "Chọn file .docx / .doc / .xlsx" : _selectedFile.Name)
                 </MudButton>
             </ActivatorContent>
         </MudFileUpload>
@@ -368,7 +376,8 @@
             await stream.CopyToAsync(ms);
             ms.Position = 0;
 
-            (_questions, _groups, _warnings) = CauHoiService.ParseWordFile(ms);
+            var ext = Path.GetExtension(_selectedFile.Name);
+            (_questions, _groups, _warnings) = CauHoiService.ParseFile(ms, ext);
             _parsed = true;
         }
         catch (Exception ex)

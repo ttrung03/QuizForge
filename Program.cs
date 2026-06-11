@@ -32,6 +32,8 @@ builder.Services.AddScoped<KhoaService>();
 builder.Services.AddScoped<MonHocService>();
 builder.Services.AddScoped<PhanService>();
 builder.Services.AddScoped<WordImportService>();
+builder.Services.AddScoped<DocImportService>();
+builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<CauHoiService>();
 builder.Services.AddScoped<DeThiService>();
 
