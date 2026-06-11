@@ -22,6 +22,7 @@ public class PhanRepository : IPhanRepository
     public async Task<List<Phan>> GetAllAsync()
         => await _context.Phans
                .Include(p => p.MaMonHocNavigation)
+               .Include(p => p.CauHois)
                .Where(p => p.XoaTamPhan != true)
                .OrderBy(p => p.ThuTu)
                .ToListAsync();
@@ -30,6 +31,7 @@ public class PhanRepository : IPhanRepository
     public async Task<List<Phan>> GetAllByMonHocAsync(Guid maMonHoc)
         => await _context.Phans
                .Include(p => p.MaMonHocNavigation)
+               .Include(p => p.CauHois)
                .Where(p => p.MaMonHoc == maMonHoc && p.XoaTamPhan != true)
                .OrderBy(p => p.ThuTu)
                .ToListAsync();

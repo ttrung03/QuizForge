@@ -49,23 +49,6 @@
                           Variant="Variant.Outlined"
                           Class="mt-3" />
 
-            <MudNumericField @bind-Value="_model.ThuTu"
-                             Label="Thứ tự"
-                             Placeholder="Ví dụ: 1"
-                             Min="1"
-                             Variant="Variant.Outlined"
-                             Class="mt-3" />
-
-            <MudNumericField @bind-Value="_model.SoLuongCauHoi"
-                             Label="Số lượng câu hỏi"
-                             Placeholder="Ví dụ: 10"
-                             Min="0"
-                             Variant="Variant.Outlined"
-                             Class="mt-3" />
-
-            <MudCheckBox @bind-Value="_model.LaCauHoiNhom"
-                         Label="Là câu hỏi nhóm"
-                         Class="mt-3" />
         </MudForm>
     </DialogContent>
 
@@ -115,11 +98,8 @@
             _model.MaMonHoc      = ExistingPhan.MaMonHoc;
             _model.TenPhan       = ExistingPhan.TenPhan;
             _model.NoiDung       = ExistingPhan.NoiDung;
-            _model.ThuTu         = ExistingPhan.ThuTu;
-            _model.SoLuongCauHoi = ExistingPhan.SoLuongCauHoi;
             _model.MaPhanCha     = ExistingPhan.MaPhanCha;
             _model.MaSoPhan      = ExistingPhan.MaSoPhan;
-            _model.LaCauHoiNhom  = ExistingPhan.LaCauHoiNhom;
         }
         else
         {
