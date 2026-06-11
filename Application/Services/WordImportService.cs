@@ -1,23 +1,25 @@
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.AspNetCore.Hosting;
 using QuestionBank.Web.Application.DTOs;
+using WpParagraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
+using DwBlip = DocumentFormat.OpenXml.Drawing.Blip;
 
 namespace QuestionBank.Web.Application.Services;
 
 /// <summary>
 /// Parse file .docx theo định dạng chuẩn HUTECH (Số 73/HD-KT).
 /// Hỗ trợ câu hỏi đơn, câu hỏi nhóm, và media (hình ảnh, âm thanh) qua marker
-/// [&lt;img&gt;filename.png&lt;/img&gt;] và [&lt;audio&gt;filename.mp3&lt;/audio&gt;].
+/// [&lt;img&gt;filename.png&lt;/img&gt;] và [&lt;audio&gt;filename.mp3&lt;/audio&gt;],
+/// cũng như ảnh nhúng trực tiếp vào file Word (Insert → Picture).
 /// </summary>
-public class WordImportService
+public class WordImportService(IWebHostEnvironment env)
 {
-    private static readonly Regex CloPrefix    = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
-    private static readonly Regex AnswerLine   = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
-    // Supports both [<img>file[</img>] and legacy [<img>file</img>] formats
-    private static readonly Regex ImgMarker    = new(@"\[<img>\]?([^\[<]+?)\]?\[?</img>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex AudioMarker  = new(@"\[<audio>\]?([^\[<]+?)\]?\[?</audio>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-//    private static readonly Regex CapDoPrefix  = new(@"^\(<(\d+)>\)", RegexOptions.Compiled);
+    private static readonly Regex CloPrefix   = new(@"^\(CLO[^)]*\)\s*", RegexOptions.Compiled);
+    private static readonly Regex AnswerLine  = new(@"^([ABCD])\.\s*(.*)", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex ImgMarker   = new(@"\[<img>\]?([^\[<]+?)\]?\[?</img>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex AudioMarker = new(@"\[<audio>\]?([^\[<]+?)\]?\[?</audio>\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private const string EndMarker = "[<br>]";
 
     private enum ParseState { Normal, CollectingPassage, CollectingSubQuestions }
@@ -29,19 +31,18 @@ public class WordImportService
         var warnings  = new List<string>();
 
         using var doc  = WordprocessingDocument.Open(stream, isEditable: false);
-        var body = doc.MainDocumentPart?.Document?.Body;
+        var mainPart = doc.MainDocumentPart;
+        var body     = mainPart?.Document?.Body;
         if (body is null) return (questions, groups, warnings);
 
-        var paragraphs = body.Elements<Paragraph>().ToList();
+        var paragraphs = body.Elements<WpParagraph>().ToList();
 
         ParseState state = ParseState.Normal;
 
-        // Normal state
-        ImportCauHoiDto? current = null;
-
-        // Group state
+        ImportCauHoiDto?     current      = null;
         ImportCauHoiNhomDto? currentGroup = null;
         List<string>         passageLines = [];
+        List<string>         passageEmbeddedImages = [];
         ImportCauHoiDto?     currentSub   = null;
 
         int paraIndex = 0;
@@ -50,7 +51,6 @@ public class WordImportService
         {
             paraIndex++;
             string text = GetParagraphText(para).Trim();
-            if (string.IsNullOrEmpty(text)) continue;
 
             // ── CollectingPassage ────────────────────────────────────────────
             if (state == ParseState.CollectingPassage)
@@ -59,15 +59,36 @@ public class WordImportService
                 {
                     var rawPassage = string.Join("\n", passageLines).Trim();
                     var (cleanPassage, anhPassage, amThanhPassage) = ExtractMedia(rawPassage);
-                    currentGroup!.NoiDung      = cleanPassage;
-                    currentGroup.AnhFiles      = anhPassage;
-                    currentGroup.AmThanhFiles  = amThanhPassage;
+                    anhPassage.AddRange(passageEmbeddedImages);
+                    currentGroup!.NoiDung     = cleanPassage;
+                    currentGroup.AnhFiles     = anhPassage;
+                    currentGroup.AmThanhFiles = amThanhPassage;
                     passageLines.Clear();
+                    passageEmbeddedImages.Clear();
                     state = ParseState.CollectingSubQuestions;
                 }
                 else
                 {
-                    passageLines.Add(text);
+                    if (!string.IsNullOrEmpty(text))
+                        passageLines.Add(text);
+                    passageEmbeddedImages.AddRange(SaveEmbeddedImages(para, mainPart!));
+                }
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(text))
+            {
+                // Đoạn trống nhưng có thể chứa ảnh nhúng
+                var imgs = SaveEmbeddedImages(para, mainPart!);
+                if (imgs.Count > 0)
+                {
+                    if (state == ParseState.CollectingSubQuestions)
+                    {
+                        if (currentSub is not null) currentSub.AnhFiles.AddRange(imgs);
+                        else currentGroup?.AnhFiles.AddRange(imgs);
+                    }
+                    else
+                        current?.AnhFiles.AddRange(imgs);
                 }
                 continue;
             }
@@ -95,9 +116,9 @@ public class WordImportService
                 }
                 else if (IsCloLine(text))
                 {
-                    // (<n>) tại đây là chỉ số câu con trong nhóm, KHÔNG phải cấp độ
                     var rawSub = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim();
                     var (cleanSub, anhSub, amThanhSub) = ExtractMedia(rawSub);
+                    anhSub.AddRange(SaveEmbeddedImages(para, mainPart!));
                     currentSub = new ImportCauHoiDto
                     {
                         CloText      = ExtractClo(text),
@@ -109,6 +130,10 @@ public class WordImportService
                 }
                 else
                 {
+                    var embSub = SaveEmbeddedImages(para, mainPart!);
+                    if (embSub.Count > 0 && currentSub is not null)
+                        currentSub.AnhFiles.AddRange(embSub);
+
                     var m = AnswerLine.Match(text);
                     if (m.Success && currentSub is not null)
                     {
@@ -136,11 +161,11 @@ public class WordImportService
                 }
                 currentGroup = new ImportCauHoiNhomDto();
                 passageLines.Clear();
+                passageEmbeddedImages.Clear();
                 state = ParseState.CollectingPassage;
                 continue;
             }
 
-            // Marker lạc trong Normal → bỏ qua
             if (text is "[</sg>]" or "[<egc>]") continue;
 
             if (text == EndMarker)
@@ -159,16 +184,21 @@ public class WordImportService
             {
                 var rawNoiDung = CloPrefix.Replace(StripSubQuestionIndex(text), "").Trim();
                 var (cleanNoiDung, anh, amThanh) = ExtractMedia(rawNoiDung);
+                anh.AddRange(SaveEmbeddedImages(para, mainPart!));
                 current = new ImportCauHoiDto
                 {
                     CloText      = ExtractClo(text),
-                   // CapDo      = ExtractCapDo(text),
                     NoiDung      = cleanNoiDung,
                     AnhFiles     = anh,
                     AmThanhFiles = amThanh
                 };
                 continue;
             }
+
+            // Đoạn không phải CLO, không phải đáp án — có thể là đoạn ảnh độc lập
+            var embNormal = SaveEmbeddedImages(para, mainPart!);
+            if (embNormal.Count > 0 && current is not null)
+                current.AnhFiles.AddRange(embNormal);
 
             var match = AnswerLine.Match(text);
             if (match.Success && current is not null)
@@ -184,7 +214,6 @@ public class WordImportService
             }
         }
 
-        // Dọn cuối file
         if (current is not null)
             warnings.Add($"Câu hỏi cuối file chưa có [<br>] kết thúc, bị bỏ qua: \"{Truncate(current.NoiDung)}\"");
 
@@ -196,6 +225,48 @@ public class WordImportService
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Trích ảnh nhúng (Drawing/Picture) từ đoạn văn, lưu vào uploads/images/,
+    /// trả về danh sách tên file đã lưu.
+    /// </summary>
+    private List<string> SaveEmbeddedImages(WpParagraph para, MainDocumentPart mainPart)
+    {
+        var names = new List<string>();
+
+        foreach (var blip in para.Descendants<DwBlip>())
+        {
+            if (blip.Embed?.Value is not string embedId) continue;
+
+            OpenXmlPart? part;
+            try { part = mainPart.GetPartById(embedId); }
+            catch { continue; }
+
+            if (part is not ImagePart imagePart) continue;
+
+            var ext = ContentTypeToExtension(imagePart.ContentType);
+            var fileName = $"img_{Guid.NewGuid():N}{ext}";
+            var dir  = Path.Combine(env.WebRootPath, "uploads", "images");
+            Directory.CreateDirectory(dir);
+
+            using var fs = File.Create(Path.Combine(dir, fileName));
+            imagePart.GetStream().CopyTo(fs);
+
+            names.Add(fileName);
+        }
+
+        return names;
+    }
+
+    private static string ContentTypeToExtension(string contentType) => contentType switch
+    {
+        "image/png"  => ".png",
+        "image/jpeg" => ".jpg",
+        "image/gif"  => ".gif",
+        "image/webp" => ".webp",
+        "image/bmp"  => ".bmp",
+        _            => ".png"
+    };
+
     private static void FinalizeSubQuestion(ImportCauHoiDto? sub, ImportCauHoiNhomDto group,
         List<string> warnings, int paraIndex)
     {
@@ -205,7 +276,6 @@ public class WordImportService
         else warnings.Add(w);
     }
 
-    /// <summary>Tách marker [&lt;img&gt;] và [&lt;audio&gt;] ra khỏi text, trả về text sạch và hai danh sách tên file.</summary>
     private static (string CleanText, List<string> AnhFiles, List<string> AmThanhFiles) ExtractMedia(string text)
     {
         var anhFiles     = ImgMarker.Matches(text).Select(m => m.Groups[1].Value.Trim()).ToList();
@@ -214,7 +284,7 @@ public class WordImportService
         return (clean, anhFiles, amThanhFiles);
     }
 
-    private static string GetParagraphText(Paragraph para)
+    private static string GetParagraphText(WpParagraph para)
         => string.Concat(para.Elements<Run>().Select(r => r.InnerText));
 
     private static bool IsCloLine(string text)
@@ -236,16 +306,7 @@ public class WordImportService
         return m.Success ? m.Value : null;
     }
 
-    /// <summary>Trích cấp độ từ prefix (&lt;n&gt;) — chỉ dùng trong Normal state. Trả null nếu không có prefix.</summary>
-    // private static short? ExtractCapDo(string text)
-    // {
-    //     var m = CapDoPrefix.Match(text);
-    //     if (!m.Success) return null;
-    //     var n = short.Parse(m.Groups[1].Value);
-    //     return (n >= 1 && n <= 3) ? n : (short)1;
-    // }
-
-    private static bool HasUnderline(Paragraph para)
+    private static bool HasUnderline(WpParagraph para)
     {
         foreach (var run in para.Elements<Run>())
         {
@@ -260,7 +321,7 @@ public class WordImportService
         return false;
     }
 
-    private static bool HasItalic(Paragraph para)
+    private static bool HasItalic(WpParagraph para)
     {
         foreach (var run in para.Elements<Run>())
         {
@@ -274,7 +335,7 @@ public class WordImportService
 
     private static string? ValidateQuestion(ImportCauHoiDto q, int paraIndex)
     {
-        if (string.IsNullOrWhiteSpace(q.NoiDung))
+        if (string.IsNullOrWhiteSpace(q.NoiDung) && q.AnhFiles.Count == 0)
             return $"Câu hỏi trống tại [<br>] dòng ~{paraIndex}, bị bỏ qua.";
         if (q.Answers.Count < 2)
             return $"Câu hỏi \"{Truncate(q.NoiDung)}\" có ít hơn 2 đáp án, bị bỏ qua.";

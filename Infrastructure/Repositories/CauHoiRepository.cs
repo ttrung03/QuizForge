@@ -103,6 +103,28 @@ public class CauHoiRepository(QuestionBankDbContext context) : ICauHoiRepository
         await context.SaveChangesAsync();
     }
 
+    public async Task ReplaceImageAsync(Guid maFile, string newTenFile)
+    {
+        var file = await context.Files.FindAsync(maFile);
+        if (file is null) return;
+        file.TenFile = newTenFile;
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<Guid> AddImageAsync(Guid maCauHoi, string tenFile)
+    {
+        var file = new Domain.Entities.FileDinhKem
+        {
+            MaFile   = Guid.NewGuid(),
+            MaCauHoi = maCauHoi,
+            TenFile  = tenFile,
+            LoaiFile = 1
+        };
+        context.Files.Add(file);
+        await context.SaveChangesAsync();
+        return file.MaFile;
+    }
+
     public async Task SoftDeleteAsync(Guid id)
     {
         var cauHoi = await context.CauHois

@@ -149,11 +149,12 @@
                 {
                     <MudText Typo="Typo.subtitle2" Class="mb-1">Câu hỏi đơn</MudText>
                     <MudTable Items="_questions" Dense="true" Hover="true"
-                              Style="max-height:220px;overflow-y:auto" FixedHeader="true"
+                              Style="max-height:260px;overflow-y:auto" FixedHeader="true"
                               Class="mb-1">
                         <HeaderContent>
                             <MudTh Style="width:40px">STT</MudTh>
                             <MudTh>Nội dung</MudTh>
+                            <MudTh Style="width:90px">Hình ảnh</MudTh>
                             <MudTh Style="width:120px">Đáp án đúng</MudTh>
                             <MudTh Style="width:80px">Cấp độ</MudTh>
                         </HeaderContent>
@@ -163,6 +164,24 @@
                                 <MudText Typo="Typo.body2" Style="white-space:normal">
                                     @Truncate(context.NoiDung)
                                 </MudText>
+                            </MudTd>
+                            <MudTd>
+                                @if (context.AnhFiles.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var f in context.AnhFiles)
+                                        {
+                                            var imgUrl = "/uploads/images/" + f;
+                                            <img src="@imgUrl" alt="@f"
+                                                 style="height:40px;max-width:60px;object-fit:contain;border:1px solid #ddd;border-radius:3px;cursor:zoom-in"
+                                                 @onclick="() => _lightboxUrl = imgUrl" />
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                                }
                             </MudTd>
                             <MudTd>
                                 @{
@@ -204,9 +223,25 @@
                                     Cấp độ: @CapDoLabel(_defaultCapDo)
                                 </MudChip>
                             </MudText>
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2" Style="white-space:pre-wrap">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="white-space:pre-wrap">
                                 @Truncate(group.NoiDung, 150)
                             </MudText>
+                            @if (group.AnhFiles.Count > 0)
+                            {
+                                <div class="d-flex flex-wrap gap-1 mt-1 mb-2">
+                                    @foreach (var f in group.AnhFiles)
+                                    {
+                                        var passageImgUrl = "/uploads/images/" + f;
+                                        <img src="@passageImgUrl" alt="@f"
+                                             style="height:50px;max-width:80px;object-fit:contain;border:1px solid #c5cae9;border-radius:3px;cursor:zoom-in"
+                                             @onclick="() => _lightboxUrl = passageImgUrl" />
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-2"></div>
+                            }
                             <MudTable Items="group.CauHoiCons" Dense="true" Hover="false"
                                       Elevation="0" Style="background:transparent">
                                 <HeaderContent>
@@ -264,8 +299,20 @@
     </DialogActions>
 </MudDialog>
 
+@if (_lightboxUrl != null)
+{
+    <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out"
+         @onclick="() => _lightboxUrl = null">
+        <img src="@_lightboxUrl"
+             style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 4px 32px #000"
+             @onclick:stopPropagation />
+    </div>
+}
+
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    string? _lightboxUrl;
 
     List<MonHocDto> _monHocList = [];
     List<PhanDto>   _phanList   = [];
