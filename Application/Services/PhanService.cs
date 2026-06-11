@@ -22,16 +22,16 @@ public class PhanService
         // Entity → DTO (ánh xạ thủ công, không cần AutoMapper)
         return list.Select(p => new PhanDto
         {
-            MaPhan       = p.MaPhan,
-            MaMonHoc     = p.MaMonHoc,
-            TenMonHoc    = p.MaMonHocNavigation?.TenMonHoc ?? string.Empty,
-            TenPhan      = p.TenPhan,
-            NoiDung      = p.NoiDung,
-            ThuTu        = p.ThuTu,
-            SoLuongCauHoi = p.SoLuongCauHoi,
-            MaPhanCha    = p.MaPhanCha,
-            MaSoPhan     = p.MaSoPhan,
-            LaCauHoiNhom = p.LaCauHoiNhom
+            MaPhan        = p.MaPhan,
+            MaMonHoc      = p.MaMonHoc,
+            TenMonHoc     = p.MaMonHocNavigation?.TenMonHoc ?? string.Empty,
+            TenPhan       = p.TenPhan,
+            NoiDung       = p.NoiDung,
+            ThuTu         = p.ThuTu,
+            SoLuongCauHoi = p.CauHois?.Count(c => c.XoaTamCauHoi != true) ?? 0,
+            MaPhanCha     = p.MaPhanCha,
+            MaSoPhan      = p.MaSoPhan,
+            LaCauHoiNhom  = p.LaCauHoiNhom
         }).ToList();
     }
 
@@ -42,16 +42,16 @@ public class PhanService
 
         return list.Select(p => new PhanDto
         {
-            MaPhan       = p.MaPhan,
-            MaMonHoc     = p.MaMonHoc,
-            TenMonHoc    = p.MaMonHocNavigation?.TenMonHoc ?? string.Empty,
-            TenPhan      = p.TenPhan,
-            NoiDung      = p.NoiDung,
-            ThuTu        = p.ThuTu,
-            SoLuongCauHoi = p.SoLuongCauHoi,
-            MaPhanCha    = p.MaPhanCha,
-            MaSoPhan     = p.MaSoPhan,
-            LaCauHoiNhom = p.LaCauHoiNhom
+            MaPhan        = p.MaPhan,
+            MaMonHoc      = p.MaMonHoc,
+            TenMonHoc     = p.MaMonHocNavigation?.TenMonHoc ?? string.Empty,
+            TenPhan       = p.TenPhan,
+            NoiDung       = p.NoiDung,
+            ThuTu         = p.ThuTu,
+            SoLuongCauHoi = p.CauHois?.Count(c => c.XoaTamCauHoi != true) ?? 0,
+            MaPhanCha     = p.MaPhanCha,
+            MaSoPhan      = p.MaSoPhan,
+            LaCauHoiNhom  = p.LaCauHoiNhom
         }).ToList();
     }
 
@@ -63,14 +63,12 @@ public class PhanService
             // ── Tạo mới ──────────────────────────────────────────────────────
             await _repo.AddAsync(new Phan
             {
-                MaMonHoc     = dto.MaMonHoc,
-                TenPhan      = dto.TenPhan.Trim(),
-                NoiDung      = dto.NoiDung?.Trim(),
-                ThuTu        = dto.ThuTu,
-                SoLuongCauHoi = dto.SoLuongCauHoi,
-                MaPhanCha    = dto.MaPhanCha,
-                MaSoPhan     = dto.MaSoPhan,
-                LaCauHoiNhom = dto.LaCauHoiNhom
+                MaMonHoc  = dto.MaMonHoc,
+                TenPhan   = dto.TenPhan.Trim(),
+                NoiDung   = dto.NoiDung?.Trim(),
+                ThuTu     = dto.ThuTu,
+                MaPhanCha = dto.MaPhanCha,
+                MaSoPhan  = dto.MaSoPhan,
             });
         }
         else
@@ -79,14 +77,12 @@ public class PhanService
             var phan = await _repo.GetByIdAsync(dto.MaPhan.Value)
                        ?? throw new Exception("Không tìm thấy phần cần cập nhật.");
 
-            phan.MaMonHoc     = dto.MaMonHoc;
-            phan.TenPhan      = dto.TenPhan.Trim();
-            phan.NoiDung      = dto.NoiDung?.Trim();
-            phan.ThuTu        = dto.ThuTu;
-            phan.SoLuongCauHoi = dto.SoLuongCauHoi;
-            phan.MaPhanCha    = dto.MaPhanCha;
-            phan.MaSoPhan     = dto.MaSoPhan;
-            phan.LaCauHoiNhom = dto.LaCauHoiNhom;
+            phan.MaMonHoc  = dto.MaMonHoc;
+            phan.TenPhan   = dto.TenPhan.Trim();
+            phan.NoiDung   = dto.NoiDung?.Trim();
+            phan.ThuTu     = dto.ThuTu;
+            phan.MaPhanCha = dto.MaPhanCha;
+            phan.MaSoPhan  = dto.MaSoPhan;
             await _repo.UpdateAsync(phan);
         }
     }

@@ -1,49 +1,190 @@
 @page "/"
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
+@using Microsoft.EntityFrameworkCore
+@using QuestionBank.Web.Application.Services
+@using QuestionBank.Web.Infrastructure.Data
+@inject KhoaService KhoaService
+@inject MonHocService MonHocService
+@inject QuestionBankDbContext Db
 
 <PageTitle>Ngân Hàng Câu Hỏi Trắc Nghiệm</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">
-    <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
-    Trang chủ
-</MudText>
+@* ── Hero header ── *@
+<div class="hero-banner mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#fff">
+        Ngân Hàng Câu Hỏi Trắc Nghiệm
+    </MudText>
+    <MudText Typo="Typo.body1" Style="color:rgba(255,255,255,.8);margin-top:4px">
+        Quản lý toàn bộ câu hỏi, đề thi và danh mục học phần tập trung tại một nơi.
+    </MudText>
+</div>
 
-<MudGrid>
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="2">
-            <MudCardContent>
-                <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Primary" Size="Size.Large" />
-                <MudText Typo="Typo.h6" Class="mt-2">Quản lý Khoa</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">Thêm, sửa, xóa danh sách khoa</MudText>
+@* ── Stat cards ── *@
+<MudGrid Spacing="3" Class="mb-5">
+    <MudItem xs="6" sm="6" md="3">
+        <div class="stat-card stat-card--blue">
+            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" /></div>
+            <div class="stat-card__body">
+                <div class="stat-card__value">@_totalKhoa</div>
+                <div class="stat-card__label">Khoa</div>
+            </div>
+        </div>
+    </MudItem>
+    <MudItem xs="6" sm="6" md="3">
+        <div class="stat-card stat-card--purple">
+            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.Book" Size="Size.Large" /></div>
+            <div class="stat-card__body">
+                <div class="stat-card__value">@_totalMonHoc</div>
+                <div class="stat-card__label">Môn học</div>
+            </div>
+        </div>
+    </MudItem>
+    <MudItem xs="6" sm="6" md="3">
+        <div class="stat-card stat-card--teal">
+            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.Quiz" Size="Size.Large" /></div>
+            <div class="stat-card__body">
+                <div class="stat-card__value">@_totalCauHoi</div>
+                <div class="stat-card__label">Câu hỏi</div>
+            </div>
+        </div>
+    </MudItem>
+    <MudItem xs="6" sm="6" md="3">
+        <div class="stat-card stat-card--orange">
+            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" /></div>
+            <div class="stat-card__body">
+                <div class="stat-card__value">@_totalDeThi</div>
+                <div class="stat-card__label">Đề thi</div>
+            </div>
+        </div>
+    </MudItem>
+</MudGrid>
+
+@* ── Difficulty breakdown ── *@
+@if (_totalCauHoi > 0)
+{
+    <MudPaper Elevation="2" Class="pa-4 mb-5 rounded-lg">
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Class="mr-2" Style="vertical-align:middle" />
+            Phân bố câu hỏi theo độ khó
+        </MudText>
+        <div class="diff-bar mb-2">
+            @if (_deCount > 0)
+            {
+                <div class="diff-bar__segment diff-bar__segment--easy"
+                     style="width:@((_deCount * 100.0 / _totalCauHoi).ToString("F0"))%"
+                     title="Dễ: @_deCount câu">
+                    @if (_deCount * 100 / _totalCauHoi >= 10)
+                    { <span>Dễ (@_deCount)</span> }
+                </div>
+            }
+            @if (_tbCount > 0)
+            {
+                <div class="diff-bar__segment diff-bar__segment--medium"
+                     style="width:@((_tbCount * 100.0 / _totalCauHoi).ToString("F0"))%"
+                     title="Trung bình: @_tbCount câu">
+                    @if (_tbCount * 100 / _totalCauHoi >= 10)
+                    { <span>Trung bình (@_tbCount)</span> }
+                </div>
+            }
+            @if (_khoCount > 0)
+            {
+                <div class="diff-bar__segment diff-bar__segment--hard"
+                     style="width:@((_khoCount * 100.0 / _totalCauHoi).ToString("F0"))%"
+                     title="Khó: @_khoCount câu">
+                    @if (_khoCount * 100 / _totalCauHoi >= 10)
+                    { <span>Khó (@_khoCount)</span> }
+                </div>
+            }
+        </div>
+        <div class="d-flex gap-4 mt-2">
+            <div class="d-flex align-center gap-1">
+                <div style="width:12px;height:12px;border-radius:3px;background:#22c55e"></div>
+                <MudText Typo="Typo.caption">Dễ: @_deCount</MudText>
+            </div>
+            <div class="d-flex align-center gap-1">
+                <div style="width:12px;height:12px;border-radius:3px;background:#f59e0b"></div>
+                <MudText Typo="Typo.caption">Trung bình: @_tbCount</MudText>
+            </div>
+            <div class="d-flex align-center gap-1">
+                <div style="width:12px;height:12px;border-radius:3px;background:#ef4444"></div>
+                <MudText Typo="Typo.caption">Khó: @_khoCount</MudText>
+            </div>
+        </div>
+    </MudPaper>
+}
+
+@* ── Quick access cards ── *@
+<MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">Truy cập nhanh</MudText>
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/danhmuc/khoa")'>
+            <MudCardContent Class="d-flex align-center gap-3">
+                <div class="quick-card__icon" style="background:#EFF6FF">
+                    <MudIcon Icon="@Icons.Material.Filled.School" Style="color:#2563EB" Size="Size.Medium" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Quản lý Khoa</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Thêm, sửa, xóa khoa</MudText>
+                </div>
             </MudCardContent>
-            <MudCardActions>
-                <MudButton Href="/danhmuc/khoa" Variant="Variant.Text" Color="Color.Primary">Xem thêm</MudButton>
-            </MudCardActions>
         </MudCard>
     </MudItem>
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="2">
-            <MudCardContent>
-                <MudIcon Icon="@Icons.Material.Filled.Book" Color="Color.Secondary" Size="Size.Large" />
-                <MudText Typo="Typo.h6" Class="mt-2">Quản lý Môn học</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">Thêm, sửa, xóa danh sách môn học</MudText>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/danhmuc/monhoc")'>
+            <MudCardContent Class="d-flex align-center gap-3">
+                <div class="quick-card__icon" style="background:#F5F3FF">
+                    <MudIcon Icon="@Icons.Material.Filled.Book" Style="color:#7C3AED" Size="Size.Medium" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Quản lý Môn học</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Thêm, sửa, xóa môn</MudText>
+                </div>
             </MudCardContent>
-            <MudCardActions>
-                <MudButton Href="/danhmuc/monhoc" Variant="Variant.Text" Color="Color.Secondary">Xem thêm</MudButton>
-            </MudCardActions>
         </MudCard>
     </MudItem>
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="2">
-            <MudCardContent>
-                <MudIcon Icon="@Icons.Material.Filled.Quiz" Color="Color.Tertiary" Size="Size.Large" />
-                <MudText Typo="Typo.h6" Class="mt-2">Câu hỏi</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">Quản lý ngân hàng câu hỏi trắc nghiệm</MudText>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/cauhoi")'>
+            <MudCardContent Class="d-flex align-center gap-3">
+                <div class="quick-card__icon" style="background:#F0FDFA">
+                    <MudIcon Icon="@Icons.Material.Filled.Quiz" Style="color:#0891B2" Size="Size.Medium" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Ngân hàng Câu hỏi</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Duyệt &amp; import câu hỏi</MudText>
+                </div>
             </MudCardContent>
-            <MudCardActions>
-                <MudButton Href="/cauhoi" Variant="Variant.Text" Color="Color.Tertiary">Xem thêm</MudButton>
-            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/dethi")'>
+            <MudCardContent Class="d-flex align-center gap-3">
+                <div class="quick-card__icon" style="background:#FFF7ED">
+                    <MudIcon Icon="@Icons.Material.Filled.Assignment" Style="color:#EA580C" Size="Size.Medium" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Quản lý Đề thi</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Tạo &amp; duyệt đề thi</MudText>
+                </div>
+            </MudCardContent>
         </MudCard>
     </MudItem>
 </MudGrid>
+
+@inject NavigationManager Nav
+
+@code {
+    int _totalKhoa, _totalMonHoc, _totalCauHoi, _totalDeThi;
+    int _deCount, _tbCount, _khoCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _totalKhoa   = (await KhoaService.GetAllAsync()).Count;
+        _totalMonHoc = (await MonHocService.GetAllAsync()).Count;
+        _totalCauHoi = await Db.CauHois.CountAsync(c => c.XoaTamCauHoi != true && c.MaCauHoiCha == null);
+        _deCount     = await Db.CauHois.CountAsync(c => c.XoaTamCauHoi != true && c.MaCauHoiCha == null && c.CapDo == 1);
+        _tbCount     = await Db.CauHois.CountAsync(c => c.XoaTamCauHoi != true && c.MaCauHoiCha == null && c.CapDo == 2);
+        _khoCount    = await Db.CauHois.CountAsync(c => c.XoaTamCauHoi != true && c.MaCauHoiCha == null && c.CapDo == 3);
+        _totalDeThi  = await Db.DeThis.CountAsync();
+    }
+}
