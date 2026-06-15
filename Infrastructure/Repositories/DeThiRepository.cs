@@ -44,6 +44,17 @@ public class DeThiRepository(QuestionBankDbContext context) : IDeThiRepository
         await context.SaveChangesAsync();
     }
 
+    /// <summary>Thêm nhiều bản đề trong 1 transaction duy nhất.</summary>
+    public async Task AddManyAsync(List<(DeThi deThi, List<ChiTietDeThi> chiTiets)> batches)
+    {
+        foreach (var (deThi, chiTiets) in batches)
+        {
+            context.DeThis.Add(deThi);
+            context.ChiTietDeThis.AddRange(chiTiets);
+        }
+        await context.SaveChangesAsync();
+    }
+
     public async Task DeleteAsync(Guid maDeThi)
     {
         var deThi = await context.DeThis

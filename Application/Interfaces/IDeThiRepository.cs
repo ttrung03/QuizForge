@@ -7,6 +7,7 @@ public interface IDeThiRepository
     Task<List<DeThi>> GetByMonHocAsync(Guid maMonHoc);
     Task<DeThi?> GetByIdAsync(Guid maDeThi);
     Task AddAsync(DeThi deThi, List<ChiTietDeThi> chiTiets);
+    Task AddManyAsync(List<(DeThi deThi, List<ChiTietDeThi> chiTiets)> batches);
     Task DeleteAsync(Guid maDeThi);
     Task UpdateDaDuyetAsync(Guid maDeThi, bool daDuyet);
     Task RemoveCauHoisAsync(Guid maDeThi, List<Guid> maCauHois);

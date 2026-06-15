@@ -40,3 +40,21 @@ public class SelectedCauHoiDto
     public Guid MaCauHoi { get; set; }
     public Guid MaPhan { get; set; }
 }
+
+/// <summary>Yêu cầu sinh N bản đề từ 1 đề gốc.</summary>
+public class SinhNhieuMaDeDto
+{
+    public Guid MaDeThiGoc   { get; set; }
+    public Guid MaMonHoc     { get; set; }
+    public int  SoBanDe      { get; set; } = 4;
+    public bool HoanViCauHoi { get; set; } = true;
+}
+
+/// <summary>Thông tin tóm tắt 1 bản đề vừa được sinh ra.</summary>
+public class KetQuaSinhMaDeDto
+{
+    public Guid   MaDeThi  { get; set; }
+    public int    MaDe     { get; set; }
+    public string TenDeThi { get; set; } = "";
+    public int    SoCauHoi { get; set; }
+}

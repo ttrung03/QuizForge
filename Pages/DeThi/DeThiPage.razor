@@ -107,6 +107,14 @@ else
                                                OnClick="@(() => OpenPreviewDialog(dt))" />
                             </MudTooltip>
 
+                            @* Sinh N mã đề *@
+                            <MudTooltip Text="Sinh nhiều bản đề từ đề này">
+                                <MudIconButton Icon="@Icons.Material.Filled.CopyAll"
+                                               Size="Size.Small" Color="Color.Secondary"
+                                               Disabled="@(dt.SoCauHoi == 0)"
+                                               OnClick="@(() => OpenSinhNhieuMaDeDialog(dt))" />
+                            </MudTooltip>
+
                             @* Duyệt / Hủy duyệt *@
                             @if (dt.DaDuyet != true)
                             {
@@ -317,6 +325,25 @@ else
         {
             await DeThiService.SaveAsync(dto);
             Snackbar.Add($"Đã tạo đề thi \"{dto.TenDeThi}\" với {dto.CauHois.Count} câu.", Severity.Success);
+            await LoadDeThiAsync();
+        }
+    }
+
+    // ── Sinh nhiều mã đề ──────────────────────────────────────────────────────
+    private async Task OpenSinhNhieuMaDeDialog(DeThiDto dt)
+    {
+        var options    = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var parameters = new DialogParameters<SinhNhieuMaDeDialog>
+        {
+            { x => x.DeThi,    dt },
+            { x => x.MaMonHoc, _maMonHoc }
+        };
+        var dialog = await DialogService.ShowAsync<SinhNhieuMaDeDialog>("Sinh nhiều mã đề", parameters, options);
+        var result = await dialog.Result;
+        // Reload nếu đã sinh thành công (result.Data = true)
+        if (result is { Canceled: false, Data: true })
+        {
+            Snackbar.Add("Đã thêm các bản đề mới vào danh sách.", Severity.Info);
             await LoadDeThiAsync();
         }
     }
