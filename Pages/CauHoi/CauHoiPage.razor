@@ -44,7 +44,7 @@
     <MudText Typo="Typo.subtitle2" Class="mb-3 mud-text-secondary" Style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem">
         Bộ lọc
     </MudText>
-    <MudGrid Spacing="2" AlignItems="Center">
+    <MudGrid Spacing="2">
         <MudItem xs="12" sm="5">
             <MudSelect T="Guid"
                        Value="_maMonHoc"
@@ -85,7 +85,7 @@
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search"
                           Clearable="true"
-                          Dense="true"
+                          Margin="Margin.Dense"
                           Disabled="@(_maPhan == Guid.Empty)" />
         </MudItem>
     </MudGrid>
@@ -191,7 +191,7 @@ else
                 <PropertyColumn Property="x => x.MaSoCauHoi" Title="STT" Style="width:64px" />
                 <TemplateColumn Title="Nội dung" CellStyle="max-width:480px">
                     <CellTemplate>
-                        <MudTooltip Text="@(context.Item.NoiDung ?? "")" Placement="Placement.Right" MaxWidth="MaxWidth.Medium">
+                        <MudTooltip Text="@(context.Item.NoiDung ?? "")" Placement="Placement.Right">
                             <MudText Typo="Typo.body2" Style="white-space:normal">
                                 @Truncate(context.Item.NoiDung ?? "", 120)
                             </MudText>
@@ -267,7 +267,7 @@ else
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.Audiotrack" Size="Size.Small" Color="Color.Secondary" Title="Có âm thanh" />
                             }
-                            <MudTooltip Text="@(grp.NoiDung ?? "")" Placement="Placement.Right" MaxWidth="MaxWidth.Medium">
+                            <MudTooltip Text="@(grp.NoiDung ?? "")" Placement="Placement.Right">
                                 <MudText Typo="Typo.body2" Class="flex-grow-1" Style="white-space:normal">
                                     @Truncate(grp.NoiDung ?? "", 100)
                                 </MudText>

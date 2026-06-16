@@ -62,22 +62,33 @@
     <DialogContent>
         <div id="preview-dethi-content">
             @* ── Header ── *@
-            <div class="text-center mb-4" style="border-bottom:2px solid #333; padding-bottom:12px">
-                <MudText Typo="Typo.subtitle2" Style="text-transform:uppercase; letter-spacing:1px">
+            <div class="preview-dethi-header mb-4">
+                <MudText Typo="Typo.overline" Style="color:rgba(255,255,255,0.75); letter-spacing:2px; font-size:11px">
                     @TenMonHoc
                 </MudText>
-                <MudText Typo="Typo.h5" Style="font-weight:700; margin:4px 0">
+                <MudText Typo="Typo.h5" Style="font-weight:700; color:#fff; margin:6px 0; line-height:1.3">
                     @DeThi.TenDeThi
                 </MudText>
-                <div class="d-flex justify-center gap-4 mt-1">
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                        Ngày tạo: @DeThi.NgayTao.ToString("dd/MM/yyyy")
-                    </MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                        Số câu: @DeThi.SoCauHoi
-                    </MudText>
+                <div class="d-flex align-center gap-3 mt-2 flex-wrap">
+                    <span class="preview-dethi-meta">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Style="font-size:13px;vertical-align:middle;margin-right:3px" />
+                        @DeThi.NgayTao.ToString("dd/MM/yyyy")
+                    </span>
+                    <span class="preview-dethi-meta">
+                        <MudIcon Icon="@Icons.Material.Filled.Quiz" Style="font-size:13px;vertical-align:middle;margin-right:3px" />
+                        @DeThi.SoCauHoi câu hỏi
+                    </span>
+                    @if (DeThi.MaDe.HasValue)
+                    {
+                        <span class="preview-dethi-meta">
+                            <MudIcon Icon="@Icons.Material.Filled.Tag" Style="font-size:13px;vertical-align:middle;margin-right:3px" />
+                            Mã đề: @DeThi.MaDe.Value.ToString("D3")
+                        </span>
+                    }
                     <MudChip T="string" Size="Size.Small"
-                             Color="@(DeThi.DaDuyet == true ? Color.Success : Color.Warning)">
+                             Icon="@(DeThi.DaDuyet == true ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.PendingActions)"
+                             Color="@(DeThi.DaDuyet == true ? Color.Success : Color.Warning)"
+                             Style="height:24px">
                         @(DeThi.DaDuyet == true ? "Đã duyệt" : "Chưa duyệt")
                     </MudChip>
                 </div>
@@ -88,32 +99,37 @@
                 var de  = DeThi.ChiTietDeThis.Count(c => c.CapDo == 1);
                 var tb  = DeThi.ChiTietDeThis.Count(c => c.CapDo == 2);
                 var kho = DeThi.ChiTietDeThis.Count(c => c.CapDo >= 3);
+                var total = de + tb + kho;
             }
-            <MudPaper Elevation="0" Class="d-flex gap-4 justify-center pa-2 mb-4"
-                      Style="background:#f9f9f9; border-radius:8px">
-                <div class="text-center">
-                    <MudText Typo="Typo.h6" Color="Color.Success">@de</MudText>
-                    <MudText Typo="Typo.caption">Dễ</MudText>
+            <div class="d-flex gap-3 mb-3 flex-wrap">
+                <div class="preview-stat-card preview-stat-card--easy">
+                    <span class="preview-stat-val">@de</span>
+                    <span class="preview-stat-lbl">Dễ</span>
                 </div>
-                <MudDivider Vertical="true" FlexItem="true" />
-                <div class="text-center">
-                    <MudText Typo="Typo.h6" Color="Color.Warning">@tb</MudText>
-                    <MudText Typo="Typo.caption">Trung bình</MudText>
+                <div class="preview-stat-card preview-stat-card--medium">
+                    <span class="preview-stat-val">@tb</span>
+                    <span class="preview-stat-lbl">Trung bình</span>
                 </div>
-                <MudDivider Vertical="true" FlexItem="true" />
-                <div class="text-center">
-                    <MudText Typo="Typo.h6" Color="Color.Error">@kho</MudText>
-                    <MudText Typo="Typo.caption">Khó</MudText>
+                <div class="preview-stat-card preview-stat-card--hard">
+                    <span class="preview-stat-val">@kho</span>
+                    <span class="preview-stat-lbl">Khó</span>
                 </div>
-                <MudDivider Vertical="true" FlexItem="true" />
                 @foreach (var phanG in DeThi.ChiTietDeThis.GroupBy(c => c.TenPhan))
                 {
-                    <div class="text-center">
-                        <MudText Typo="Typo.h6">@phanG.Count()</MudText>
-                        <MudText Typo="Typo.caption">@phanG.Key</MudText>
+                    <div class="preview-stat-card preview-stat-card--phan">
+                        <span class="preview-stat-val">@phanG.Count()</span>
+                        <span class="preview-stat-lbl">@phanG.Key</span>
                     </div>
                 }
-            </MudPaper>
+            </div>
+            @if (total > 0)
+            {
+                <div class="diff-bar mb-4" style="height:10px; border-radius:5px">
+                    @if (de > 0) { <div class="diff-bar__segment diff-bar__segment--easy" style="width:@($"{de * 100 / total}%")"></div> }
+                    @if (tb > 0) { <div class="diff-bar__segment diff-bar__segment--medium" style="width:@($"{tb * 100 / total}%")"></div> }
+                    @if (kho > 0) { <div class="diff-bar__segment diff-bar__segment--hard" style="width:@($"{kho * 100 / total}%")"></div> }
+                </div>
+            }
 
             @* ── Danh sách câu hỏi ── *@
             @{
@@ -164,13 +180,16 @@
                         else
                         {
                             <MudPaper Elevation="0" Class="pa-3 mb-2"
-                                      Style="background:#f0f4ff; border-left:4px solid #5c6bc0; border-radius:4px">
+                                      Style="background:linear-gradient(90deg,#f0f4ff,#e8ecff); border-left:4px solid #5c6bc0; border-radius:8px">
                                 <div class="d-flex align-start justify-space-between">
                                     <div style="flex:1">
-                                        <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight:600; text-transform:uppercase; letter-spacing:0.5px">
-                                            Câu hỏi nhóm (@cauHoi.CauHoiCons.Count câu)
-                                        </MudText>
-                                        <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-top:4px">
+                                        <div class="d-flex align-center gap-2 mb-2">
+                                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Style="color:#5c6bc0" />
+                                            <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight:700; text-transform:uppercase; letter-spacing:0.8px">
+                                                Nhóm câu hỏi &mdash; @cauHoi.CauHoiCons.Count câu
+                                            </MudText>
+                                        </div>
+                                        <MudText Typo="Typo.body1" Style="white-space:pre-wrap; color:#1e293b; line-height:1.6">
                                             @cauHoi.NoiDung
                                         </MudText>
                                         @if (cauHoi.Files.Count > 0)
@@ -178,9 +197,10 @@
                                             @RenderMedia(cauHoi.Files)
                                         }
                                     </div>
-                                    <MudTooltip Text="Chỉnh sửa đoạn văn nhóm">
+                                    <MudTooltip Text="Chỉnh sửa đoạn văn nhóm" Arrow="true">
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                        Size="Size.Small" Color="Color.Primary"
+                                                       Variant="Variant.Outlined"
                                                        OnClick="@(() => BeginParentEdit(cauHoi))" />
                                     </MudTooltip>
                                 </div>
@@ -248,60 +268,60 @@
                                 }
                                 else
                                 {
-                                    <div class="d-flex align-start gap-2">
-                                        <MudText Typo="Typo.body1" Style="min-width:32px; font-weight:600">
-                                            @conStt.
-                                        </MudText>
-                                        <div style="flex:1">
-                                            <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
-                                                @con.NoiDung
-                                            </MudText>
-                                            @if (con.Files.Count > 0)
-                                            {
-                                                @RenderMedia(con.Files)
-                                            }
-                                            <div class="pl-2">
-                                                @for (int i = 0; i < con.CauTraLois.Count; i++)
+                                    <div class="preview-question-card">
+                                        <div class="d-flex align-start gap-2">
+                                            <span class="preview-question-num">@conStt</span>
+                                            <div style="flex:1">
+                                                <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:8px; color:#1e293b; line-height:1.6; font-weight:500">
+                                                    @con.NoiDung
+                                                </MudText>
+                                                @if (con.Files.Count > 0)
                                                 {
-                                                    var opt = con.CauTraLois[i];
-                                                    bool isCorrect = opt.LaDapAn;
-                                                    string letterLabel = i < letters.Length ? letters[i].ToString() : $"{i+1}";
-                                                    <div class="d-flex align-start gap-1 mb-1"
-                                                         style="@((_showAnswers && isCorrect) ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
-                                                        <MudText Typo="Typo.body2"
-                                                                 Style="@LetterStyle(isCorrect)"
-                                                                 Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
-                                                            @letterLabel.
-                                                        </MudText>
-                                                        <MudText Typo="Typo.body2"
-                                                                 Style="white-space:pre-wrap"
-                                                                 Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
-                                                            @opt.NoiDung
-                                                            @if (_showAnswers && isCorrect)
-                                                            {
-                                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                                                         Size="Size.Small" Color="Color.Success"
-                                                                         Style="vertical-align:middle; margin-left:4px" />
-                                                            }
-                                                        </MudText>
-                                                    </div>
+                                                    @RenderMedia(con.Files)
                                                 }
+                                                <div style="margin-top:6px">
+                                                    @for (int i = 0; i < con.CauTraLois.Count; i++)
+                                                    {
+                                                        var opt = con.CauTraLois[i];
+                                                        bool isCorrect = opt.LaDapAn;
+                                                        string letterLabel = i < letters.Length ? letters[i].ToString() : $"{i+1}";
+                                                        <div class="d-flex align-start gap-2 mb-1 pa-1 @((_showAnswers && isCorrect) ? "preview-answer-correct" : "")">
+                                                            <span class="preview-answer-letter @((_showAnswers && isCorrect) ? "preview-answer-letter--correct" : "")">
+                                                                @letterLabel
+                                                            </span>
+                                                            <MudText Typo="Typo.body2"
+                                                                     Style="white-space:pre-wrap; flex:1"
+                                                                     Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                                                @opt.NoiDung
+                                                                @if (_showAnswers && isCorrect)
+                                                                {
+                                                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                                             Size="Size.Small" Color="Color.Success"
+                                                                             Style="vertical-align:middle; margin-left:4px" />
+                                                                }
+                                                            </MudText>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-column gap-1 align-center">
+                                                <MudChip T="string" Size="Size.Small" Color="@CapDoColor(con.CapDo)" Style="min-width:36px; height:22px">
+                                                    @CapDoLabel(con.CapDo)
+                                                </MudChip>
+                                                <MudTooltip Text="Chỉnh sửa câu hỏi này" Arrow="true">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                   Size="Size.Small" Color="Color.Primary"
+                                                                   Variant="Variant.Outlined"
+                                                                   OnClick="@(() => BeginEdit(con))" />
+                                                </MudTooltip>
+                                                <MudTooltip Text="Xóa câu hỏi khỏi đề thi" Arrow="true">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
+                                                                   Size="Size.Small" Color="Color.Error"
+                                                                   Variant="Variant.Outlined"
+                                                                   OnClick="@(() => RemoveSingleAsync(con))" />
+                                                </MudTooltip>
                                             </div>
                                         </div>
-                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(con.CapDo)"
-                                                 Style="min-width:36px">
-                                            @CapDoLabel(con.CapDo)
-                                        </MudChip>
-                                        <MudTooltip Text="Chỉnh sửa câu hỏi này">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                           Size="Size.Small" Color="Color.Primary"
-                                                           OnClick="@(() => BeginEdit(con))" />
-                                        </MudTooltip>
-                                        <MudTooltip Text="Xóa câu hỏi khỏi đề thi">
-                                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                           Size="Size.Small" Color="Color.Error"
-                                                           OnClick="@(() => RemoveSingleAsync(con))" />
-                                        </MudTooltip>
                                     </div>
                                 }
                             </div>
@@ -387,69 +407,66 @@
                         }
                         else
                         {
-                            <div class="d-flex align-start gap-2">
-                                <MudText Typo="Typo.body1" Style="min-width:32px; font-weight:600">
-                                    @curStt.
-                                </MudText>
-                                <div style="flex:1">
-                                    <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:6px">
-                                        @cauHoi.NoiDung
-                                    </MudText>
-                                    @if (cauHoi.Files.Count > 0)
-                                    {
-                                        @RenderMedia(cauHoi.Files)
-                                    }
-                                    <div class="pl-2">
-                                        @for (int i = 0; i < cauHoi.CauTraLois.Count; i++)
+                            <div class="preview-question-card">
+                                <div class="d-flex align-start gap-2">
+                                    <span class="preview-question-num">@curStt</span>
+                                    <div style="flex:1">
+                                        <MudText Typo="Typo.body1" Style="white-space:pre-wrap; margin-bottom:8px; color:#1e293b; line-height:1.6; font-weight:500">
+                                            @cauHoi.NoiDung
+                                        </MudText>
+                                        @if (cauHoi.Files.Count > 0)
                                         {
-                                            var opt = cauHoi.CauTraLois[i];
-                                            bool isCorrect = opt.LaDapAn;
-                                            string letterLabel = i < letters.Length ? letters[i].ToString() : $"{i+1}";
-                                            <div class="d-flex align-start gap-1 mb-1"
-                                                 style="@((_showAnswers && isCorrect) ? "background:#e8f5e9; border-radius:4px; padding:2px 6px" : "padding:2px 6px")">
-                                                <MudText Typo="Typo.body2"
-                                                         Style="@LetterStyle(isCorrect)"
-                                                         Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
-                                                    @letterLabel.
-                                                </MudText>
-                                                <MudText Typo="Typo.body2"
-                                                         Style="white-space:pre-wrap"
-                                                         Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
-                                                    @opt.NoiDung
-                                                    @if (_showAnswers && isCorrect)
-                                                    {
-                                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                                                 Size="Size.Small" Color="Color.Success"
-                                                                 Style="vertical-align:middle; margin-left:4px" />
-                                                    }
-                                                </MudText>
-                                            </div>
+                                            @RenderMedia(cauHoi.Files)
                                         }
+                                        <div style="margin-top:6px">
+                                            @for (int i = 0; i < cauHoi.CauTraLois.Count; i++)
+                                            {
+                                                var opt = cauHoi.CauTraLois[i];
+                                                bool isCorrect = opt.LaDapAn;
+                                                string letterLabel = i < letters.Length ? letters[i].ToString() : $"{i+1}";
+                                                <div class="d-flex align-start gap-2 mb-1 pa-1 @((_showAnswers && isCorrect) ? "preview-answer-correct" : "")">
+                                                    <span class="preview-answer-letter @((_showAnswers && isCorrect) ? "preview-answer-letter--correct" : "")">
+                                                        @letterLabel
+                                                    </span>
+                                                    <MudText Typo="Typo.body2"
+                                                             Style="white-space:pre-wrap; flex:1"
+                                                             Color="@(_showAnswers && isCorrect ? Color.Success : Color.Default)">
+                                                        @opt.NoiDung
+                                                        @if (_showAnswers && isCorrect)
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                                     Size="Size.Small" Color="Color.Success"
+                                                                     Style="vertical-align:middle; margin-left:4px" />
+                                                        }
+                                                    </MudText>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-column gap-1 align-center">
+                                        <MudChip T="string" Size="Size.Small" Color="@CapDoColor(cauHoi.CapDo)" Style="min-width:36px; height:22px">
+                                            @CapDoLabel(cauHoi.CapDo)
+                                        </MudChip>
+                                        <MudTooltip Text="Chỉnh sửa câu hỏi này" Arrow="true">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                           Size="Size.Small" Color="Color.Primary"
+                                                           Variant="Variant.Outlined"
+                                                           OnClick="@(() => BeginEdit(cauHoi))" />
+                                        </MudTooltip>
+                                        <MudTooltip Text="Xóa câu hỏi khỏi đề thi" Arrow="true">
+                                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
+                                                           Size="Size.Small" Color="Color.Error"
+                                                           Variant="Variant.Outlined"
+                                                           OnClick="@(() => RemoveSingleAsync(cauHoi))" />
+                                        </MudTooltip>
                                     </div>
                                 </div>
-                                <MudChip T="string" Size="Size.Small" Color="@CapDoColor(cauHoi.CapDo)"
-                                         Style="min-width:36px">
-                                    @CapDoLabel(cauHoi.CapDo)
-                                </MudChip>
-                                <MudTooltip Text="Chỉnh sửa câu hỏi này">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                   Size="Size.Small" Color="Color.Primary"
-                                                   OnClick="@(() => BeginEdit(cauHoi))" />
-                                </MudTooltip>
-                                <MudTooltip Text="Xóa câu hỏi khỏi đề thi">
-                                    <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                   Size="Size.Small" Color="Color.Error"
-                                                   OnClick="@(() => RemoveSingleAsync(cauHoi))" />
-                                </MudTooltip>
                             </div>
                         }
                     </div>
                 }
 
-                @if (itemIdx < totalItems)
-                {
-                    <MudDivider Class="mb-3" Style="border-color:#eee" />
-                }
+
             }
         </div>
 

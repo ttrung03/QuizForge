@@ -1,7 +1,6 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using Microsoft.AspNetCore.Hosting;
 using QuestionBank.Web.Application.DTOs;
 
 namespace QuestionBank.Web.Application.Services;
@@ -9,7 +8,7 @@ namespace QuestionBank.Web.Application.Services;
 /// <summary>
 /// Sinh file Word (.docx) từ dữ liệu đề thi.
 /// </summary>
-public class ExportDeThiService(IWebHostEnvironment env)
+public class ExportDeThiService
 {
     private const string Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 

@@ -75,18 +75,17 @@
             </MudText>
         </MudAlert>
 
-        <MudFileUpload T="IBrowserFile"
+        <MudFileUpload T="IBrowserFile" @ref="_wordUpload"
                        Accept=".docx,.doc,.xlsx"
                        FilesChanged="OnFileSelected"
-                       Class="mb-2">
-            <ActivatorContent>
-                <MudButton Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.AttachFile"
-                           Color="Color.Primary">
-                    @(_selectedFile is null ? "Chọn file .docx / .doc / .xlsx" : _selectedFile.Name)
-                </MudButton>
-            </ActivatorContent>
-        </MudFileUpload>
+                       Class="mb-2" />
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.AttachFile"
+                   Color="Color.Primary"
+                   Class="mb-2"
+                   OnClick="@(() => _wordUpload!.OpenFilePickerAsync())">
+            @(_selectedFile is null ? "Chọn file .docx / .doc / .xlsx" : _selectedFile.Name)
+        </MudButton>
 
         @if (_selectedFile is not null)
         {
@@ -321,6 +320,7 @@
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
     string? _lightboxUrl;
+    MudFileUpload<IBrowserFile>? _wordUpload;
 
     List<MonHocDto> _monHocList = [];
     List<PhanDto>   _phanList   = [];
