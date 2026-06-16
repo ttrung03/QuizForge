@@ -8,6 +8,8 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IWebHostEnvironment Env
+@inject ExportDeThiService ExportSvc
+@inject IJSRuntime JS
 
 <MudDialog Style="max-width:860px">
     <TitleContent>
@@ -570,6 +572,14 @@
     </DialogContent>
 
     <DialogActions>
+        <MudSwitch T="bool" @bind-Value="_includeAnswerKey"
+                   Color="Color.Info" Label="Kèm bảng đáp án" Class="mr-2" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.FileDownload"
+                   Disabled="@_exporting"
+                   OnClick="ExportWordAsync">
+            @(_exporting ? "Đang xuất…" : "Xuất Word")
+        </MudButton>
         <MudButton OnClick="@(() => MudDialog.Cancel())">Đóng</MudButton>
     </DialogActions>
 </MudDialog>
@@ -597,6 +607,8 @@
     bool _showAnswers      = false;
     bool _shuffleQuestions = false;
     bool _shuffleAnswers   = false;
+    bool _includeAnswerKey = true;
+    bool _exporting        = false;
 
     string? _lightboxUrl;
     List<ChiTietDeThiDto> _displayItems = [];
@@ -737,6 +749,50 @@
         {
             found.CauTraLois[i].NoiDung = dto.CauTraLois[i].NoiDung;
             found.CauTraLois[i].LaDapAn = dto.CauTraLois[i].LaDapAn;
+        }
+    }
+
+    // ── Export ────────────────────────────────────────────────────────────────
+    private async Task ExportWordAsync()
+    {
+        _exporting = true;
+        try
+        {
+            // Dùng _displayItems để export đúng thứ tự hoán vị hiện tại
+            var deThiExport = new DeThiDto
+            {
+                MaDeThi       = DeThi.MaDeThi,
+                MaMonHoc      = DeThi.MaMonHoc,
+                TenDeThi      = DeThi.TenDeThi,
+                NgayTao       = DeThi.NgayTao,
+                DaDuyet       = DeThi.DaDuyet,
+                MaDe          = DeThi.MaDe,
+                ChiTietDeThis = _displayItems
+            };
+
+            var bytes = ExportSvc.ExportToWord(
+                deThi:            deThiExport,
+                tenMonHoc:        TenMonHoc,
+                tenKhoa:          "",
+                showAnswers:      _showAnswers,
+                includeAnswerKey: _includeAnswerKey);
+
+            var fileName = $"{DeThi.TenDeThi}{(DeThi.MaDe.HasValue ? $"_De{DeThi.MaDe.Value:D3}" : "")}.docx";
+            fileName = string.Concat(fileName.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+
+            var base64 = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, base64,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+
+            Snackbar.Add("Đã xuất file Word thành công.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Lỗi xuất file: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _exporting = false;
         }
     }
 

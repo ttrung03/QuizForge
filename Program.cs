@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using QuestionBank.Web;
+using QuestionBank.Web.Application.DTOs;
 using QuestionBank.Web.Application.Interfaces;
 using QuestionBank.Web.Application.Services;
 using QuestionBank.Web.Components;
@@ -36,6 +37,7 @@ builder.Services.AddScoped<DocImportService>();
 builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<CauHoiService>();
 builder.Services.AddScoped<DeThiService>();
+builder.Services.AddScoped<ExportDeThiService>();
 
 var app = builder.Build();
 
@@ -56,4 +58,31 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// ── Export API ───────────────────────────────────────────────────────────────
+app.MapPost("/api/export/word", (
+    ExportRequestDto   req,
+    ExportDeThiService exportSvc) =>
+{
+    var bytes = exportSvc.ExportToWord(
+        deThi:           req.DeThi,
+        tenMonHoc:       req.TenMonHoc,
+        tenKhoa:         req.TenKhoa,
+        showAnswers:     req.ShowAnswers,
+        includeAnswerKey: req.IncludeAnswerKey);
+
+    var fileName = SanitizeFileName(
+        $"{req.DeThi.TenDeThi}{(req.DeThi.MaDe.HasValue ? $"_De{req.DeThi.MaDe.Value:D3}" : "")}.docx");
+
+    return Results.File(
+        bytes,
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        fileDownloadName: fileName);
+}).DisableAntiforgery();
+
 app.Run();
+
+static string SanitizeFileName(string name)
+{
+    var invalid = Path.GetInvalidFileNameChars();
+    return string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c));
+}

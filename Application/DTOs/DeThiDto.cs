@@ -50,6 +50,16 @@ public class SinhNhieuMaDeDto
     public bool HoanViCauHoi { get; set; } = true;
 }
 
+/// <summary>Yêu cầu xuất đề thi ra file Word.</summary>
+public class ExportRequestDto
+{
+    public DeThiDto DeThi           { get; set; } = null!;
+    public string   TenMonHoc       { get; set; } = "";
+    public string   TenKhoa         { get; set; } = "";
+    public bool     ShowAnswers      { get; set; }
+    public bool     IncludeAnswerKey { get; set; }
+}
+
 /// <summary>Thông tin tóm tắt 1 bản đề vừa được sinh ra.</summary>
 public class KetQuaSinhMaDeDto
 {
