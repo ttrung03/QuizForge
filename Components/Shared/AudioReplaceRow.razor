@@ -96,18 +96,16 @@
             @if (_tab == 1)
             {
                 <div class="d-flex align-center gap-2 flex-wrap">
-                    <MudFileUpload T="IBrowserFile"
+                    <MudFileUpload T="IBrowserFile" @ref="_audioUpload"
                                    Accept=".mp3,.wav,.ogg,.m4a,.aac"
-                                   FilesChanged="OnFileSelected">
-                        <ActivatorContent>
-                            <MudButton Variant="Variant.Outlined"
-                                       StartIcon="@Icons.Material.Filled.AudioFile"
-                                       Color="Color.Warning"
-                                       Size="Size.Small">
-                                @(_selectedFile is null ? "Chọn file audio" : _selectedFile.Name)
-                            </MudButton>
-                        </ActivatorContent>
-                    </MudFileUpload>
+                                   FilesChanged="OnFileSelected" />
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.AudioFile"
+                               Color="Color.Warning"
+                               Size="Size.Small"
+                               OnClick="@(() => _audioUpload!.OpenFilePickerAsync())">
+                        @(_selectedFile is null ? "Chọn file audio" : _selectedFile.Name)
+                    </MudButton>
 
                     @if (_selectedFile is not null)
                     {
@@ -136,6 +134,7 @@
     [Parameter, EditorRequired] public FileDinhKemDto Audio { get; set; } = null!;
     [Parameter] public EventCallback<FileDinhKemDto> OnReplaced { get; set; }
 
+    MudFileUpload<IBrowserFile>? _audioUpload;
     bool _showReplace = false;
     int  _tab = 0;
 

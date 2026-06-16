@@ -96,18 +96,16 @@
             @if (_tab == 1)
             {
                 <div class="d-flex align-center gap-2 flex-wrap">
-                    <MudFileUpload T="IBrowserFile"
+                    <MudFileUpload T="IBrowserFile" @ref="_imageUpload"
                                    Accept=".jpg,.jpeg,.png,.gif,.webp,.bmp"
-                                   FilesChanged="OnFileSelected">
-                        <ActivatorContent>
-                            <MudButton Variant="Variant.Outlined"
-                                       StartIcon="@Icons.Material.Filled.Image"
-                                       Color="Color.Success"
-                                       Size="Size.Small">
-                                @(_selectedFile is null ? "Chọn file hình ảnh" : _selectedFile.Name)
-                            </MudButton>
-                        </ActivatorContent>
-                    </MudFileUpload>
+                                   FilesChanged="OnFileSelected" />
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Image"
+                               Color="Color.Success"
+                               Size="Size.Small"
+                               OnClick="@(() => _imageUpload!.OpenFilePickerAsync())">
+                        @(_selectedFile is null ? "Chọn file hình ảnh" : _selectedFile.Name)
+                    </MudButton>
 
                     @if (_selectedFile is not null)
                     {
@@ -147,6 +145,7 @@
     [Parameter, EditorRequired] public FileDinhKemDto Image { get; set; } = null!;
     [Parameter] public EventCallback<FileDinhKemDto> OnReplaced { get; set; }
 
+    MudFileUpload<IBrowserFile>? _imageUpload;
     bool _showReplace = false;
     int  _tab = 0;
 

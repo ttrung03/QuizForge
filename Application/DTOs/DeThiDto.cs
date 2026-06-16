@@ -40,3 +40,31 @@ public class SelectedCauHoiDto
     public Guid MaCauHoi { get; set; }
     public Guid MaPhan { get; set; }
 }
+
+/// <summary>Yêu cầu sinh N bản đề từ 1 đề gốc.</summary>
+public class SinhNhieuMaDeDto
+{
+    public Guid MaDeThiGoc   { get; set; }
+    public Guid MaMonHoc     { get; set; }
+    public int  SoBanDe      { get; set; } = 4;
+    public bool HoanViCauHoi { get; set; } = true;
+}
+
+/// <summary>Yêu cầu xuất đề thi ra file Word.</summary>
+public class ExportRequestDto
+{
+    public DeThiDto DeThi           { get; set; } = null!;
+    public string   TenMonHoc       { get; set; } = "";
+    public string   TenKhoa         { get; set; } = "";
+    public bool     ShowAnswers      { get; set; }
+    public bool     IncludeAnswerKey { get; set; }
+}
+
+/// <summary>Thông tin tóm tắt 1 bản đề vừa được sinh ra.</summary>
+public class KetQuaSinhMaDeDto
+{
+    public Guid   MaDeThi  { get; set; }
+    public int    MaDe     { get; set; }
+    public string TenDeThi { get; set; } = "";
+    public int    SoCauHoi { get; set; }
+}

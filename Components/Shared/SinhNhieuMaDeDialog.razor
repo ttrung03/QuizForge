@@ -1,0 +1,269 @@
+@using MudBlazor
+@using QuestionBank.Web.Application.DTOs
+@using QuestionBank.Web.Application.Services
+@inject DeThiService DeThiService
+@inject ISnackbar Snackbar
+
+<MudDialog Style="max-width:520px">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.CopyAll" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Sinh nhiều mã đề</MudText>
+        </div>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_step == 1)
+        {
+            @* ── Bước 1: Cấu hình ── *@
+            <MudStack Spacing="4">
+
+                @* Thông tin đề gốc *@
+                <MudPaper Elevation="0" Class="pa-3"
+                          Style="background:linear-gradient(135deg,#e3f2fd,#f3e5f5); border-radius:10px; border:1px solid #bbdefb">
+                    <div class="d-flex align-center gap-2 mb-1">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Style="font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#1565c0">
+                            Đề thi gốc
+                        </MudText>
+                    </div>
+                    <MudText Typo="Typo.body1" Style="font-weight:600">@DeThi.TenDeThi</MudText>
+                    <div class="d-flex gap-3 mt-1">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            <b>@DeThi.SoCauHoi</b> câu hỏi
+                        </MudText>
+                        @if (DeThi.MaDe.HasValue)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Mã đề gốc: <b>@DeThi.MaDe.Value.ToString("D3")</b>
+                            </MudText>
+                        }
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(DeThi.DaDuyet == true ? Color.Success : Color.Warning)">
+                            @(DeThi.DaDuyet == true ? "Đã duyệt" : "Chưa duyệt")
+                        </MudChip>
+                    </div>
+                </MudPaper>
+
+                <MudDivider />
+
+                @* Số bản đề *@
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                        Số bản đề cần sinh: <b style="color:#7b1fa2; font-size:1.1rem">@_soBanDe</b>
+                    </MudText>
+                    <MudSlider T="int"
+                               @bind-Value="_soBanDe"
+                               Min="2" Max="10" Step="1"
+                               Color="Color.Secondary"
+                               TickMarks="true" />
+                    <div class="d-flex justify-space-between">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">2 bản</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">10 bản</MudText>
+                    </div>
+
+                    @* Preview tên phiên bản sẽ được tạo *@
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2 mb-1 d-block">
+                        Tên đề sẽ có dạng:
+                    </MudText>
+                    <div class="d-flex flex-wrap gap-1">
+                        @for (int i = 0; i < _soBanDe; i++)
+                        {
+                            var lbl = VariantLabel(i);
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Label">
+                                 @lbl
+                            </MudChip>
+                        }
+                    </div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1 d-block" Style="font-style:italic">
+                        Ví dụ: "@DeThi.TenDeThi — A"
+                    </MudText>
+                </div>
+
+                <MudDivider />
+
+                @* Tùy chọn hoán vị *@
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Tùy chọn hoán vị</MudText>
+
+                    <MudPaper Elevation="0" Class="pa-3"
+                              Style="@(_hoanViCauHoi ? "border:1px solid #7b1fa2; border-radius:8px; background:#fce4ec" : "border:1px solid #e0e0e0; border-radius:8px")">
+                        <div class="d-flex align-center justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.body2" Style="font-weight:600">
+                                    <MudIcon Icon="@Icons.Material.Filled.Shuffle" Size="Size.Small" Class="mr-1" />
+                                    Hoán vị thứ tự câu hỏi
+                                </MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    Mỗi bản đề có thứ tự câu hỏi khác nhau ngẫu nhiên.
+                                    Câu nhóm vẫn giữ cấu trúc nội bộ.
+                                </MudText>
+                            </div>
+                            <MudSwitch T="bool" @bind-Value="_hoanViCauHoi"
+                                       Color="Color.Secondary" />
+                        </div>
+                    </MudPaper>
+                </div>
+
+                @* Cảnh báo nếu không hoán vị *@
+                @if (!_hoanViCauHoi)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Warning">
+                        Tất cả bản đề sẽ có cùng thứ tự câu hỏi. Chỉ khác nhau ở Mã đề.
+                    </MudAlert>
+                }
+
+            </MudStack>
+        }
+        else
+        {
+            @* ── Bước 2: Kết quả ── *@
+            <div>
+                @if (_isGenerating)
+                {
+                    <div class="d-flex flex-column align-center pa-6 gap-3">
+                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.body1" Class="mud-text-secondary">
+                            Đang sinh @_soBanDe bản đề…
+                        </MudText>
+                    </div>
+                }
+                else if (_results.Count > 0)
+                {
+                    <div class="d-flex align-center gap-2 mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                        <MudText Typo="Typo.h6" Color="Color.Success">
+                            Đã sinh thành công @_results.Count bản đề!
+                        </MudText>
+                    </div>
+
+                    <MudTable Items="_results" Dense="true" Hover="true" Elevation="1"
+                              Style="border-radius:8px; overflow:hidden">
+                        <HeaderContent>
+                            <MudTh Style="background:#f3e5f5; font-weight:700">Phiên bản</MudTh>
+                            <MudTh Style="background:#f3e5f5; font-weight:700">Tên đề thi</MudTh>
+                            <MudTh Style="background:#f3e5f5; font-weight:700; text-align:center">Số câu</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                @{
+                                    // Trích chữ cái phiên bản từ tên đề (sau " — ")
+                                    var parts  = context.TenDeThi.Split(" \u2014 ");
+                                    var pLabel = parts.Length > 1 ? parts[^1].Trim() : "?";
+                                }
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                                         Icon="@Icons.Material.Filled.Label">
+                                    Phiên bản @pLabel
+                                </MudChip>
+                            </MudTd>
+                            <MudTd Style="font-size:13px; white-space:normal">@context.TenDeThi</MudTd>
+                            <MudTd Style="text-align:center">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                                    @context.SoCauHoi câu
+                                </MudChip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3"
+                              Icon="@Icons.Material.Filled.Info">
+                        Các bản đề vừa tạo đang ở trạng thái <b>Chưa duyệt</b>.
+                        Vào Xem trước để kiểm tra và phê duyệt từng đề.
+                    </MudAlert>
+                }
+                else if (_errorMessage != null)
+                {
+                    <MudAlert Severity="Severity.Error" Icon="@Icons.Material.Filled.Error">
+                        @_errorMessage
+                    </MudAlert>
+                }
+            </div>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        @if (_step == 1)
+        {
+            <MudButton OnClick="Cancel" Variant="Variant.Text">Hủy</MudButton>
+            <MudButton Color="Color.Secondary"
+                       Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.AutoAwesome"
+                       Disabled="@(DeThi.SoCauHoi == 0)"
+                       OnClick="StartGenerate">
+                Sinh @_soBanDe bản đề
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Disabled="@_isGenerating"
+                       OnClick="CloseWithResult">
+                @(_isGenerating ? "Đang xử lý…" : "Đóng & Tải lại")
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public DeThiDto DeThi    { get; set; } = null!;
+    [Parameter] public Guid     MaMonHoc { get; set; }
+
+    int  _step         = 1;
+    int  _soBanDe      = 4;
+    bool _hoanViCauHoi = true;
+    bool _isGenerating = false;
+
+    List<KetQuaSinhMaDeDto> _results      = [];
+    string?                 _errorMessage = null;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void CloseWithResult()
+        => MudDialog.Close(DialogResult.Ok(_results.Count > 0));
+
+    private async Task StartGenerate()
+    {
+        _step         = 2;
+        _isGenerating = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var request = new SinhNhieuMaDeDto
+            {
+                MaDeThiGoc   = DeThi.MaDeThi,
+                MaMonHoc     = MaMonHoc,
+                SoBanDe      = _soBanDe,
+                HoanViCauHoi = _hoanViCauHoi
+            };
+
+            _results = await DeThiService.SinhNhieuMaDeAsync(request);
+            Snackbar.Add($"Đã sinh thành công {_results.Count} bản đề!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Lỗi: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    /// <summary>Tạo nhãn chữ cái phiên bản (A, B, … Z, AA, AB …)</summary>
+    private static string VariantLabel(int index)
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        if (index < 26) return chars[index].ToString();
+        var sb = new System.Text.StringBuilder();
+        var n = index + 1;
+        while (n > 0) { n--; sb.Insert(0, chars[n % 26]); n /= 26; }
+        return sb.ToString();
+    }
+}

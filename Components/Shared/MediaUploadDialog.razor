@@ -27,15 +27,13 @@
             </MudText>
 
             <div class="d-flex align-center gap-3 flex-wrap">
-                <MudFileUpload T="IBrowserFile" Accept=".zip" FilesChanged="OnZipSelected">
-                    <ActivatorContent>
-                        <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Filled.FolderZip"
-                                   Color="Color.Primary">
-                            @(_selectedZip is null ? "Chọn file .zip" : _selectedZip.Name)
-                        </MudButton>
-                    </ActivatorContent>
-                </MudFileUpload>
+                <MudFileUpload T="IBrowserFile" @ref="_zipUpload" Accept=".zip" FilesChanged="OnZipSelected" />
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.FolderZip"
+                           Color="Color.Primary"
+                           OnClick="@(() => _zipUpload!.OpenFilePickerAsync())">
+                    @(_selectedZip is null ? "Chọn file .zip" : _selectedZip.Name)
+                </MudButton>
 
                 @if (_selectedZip is not null)
                 {
@@ -85,18 +83,16 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="7" Class="d-flex align-end gap-2">
-                <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                <MudFileUpload T="IReadOnlyList<IBrowserFile>" @ref="_filesUpload"
                                Accept="@AcceptTypes"
                                FilesChanged="OnFilesSelected"
-                               MaximumFileCount="50">
-                    <ActivatorContent>
-                        <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Filled.AttachFile"
-                                   Color="Color.Default">
-                            @(_selectedFiles.Count == 0 ? "Chọn file(s)" : $"Đã chọn {_selectedFiles.Count} file")
-                        </MudButton>
-                    </ActivatorContent>
-                </MudFileUpload>
+                               MaximumFileCount="50" />
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.AttachFile"
+                           Color="Color.Default"
+                           OnClick="@(() => _filesUpload!.OpenFilePickerAsync())">
+                    @(_selectedFiles.Count == 0 ? "Chọn file(s)" : $"Đã chọn {_selectedFiles.Count} file")
+                </MudButton>
 
                 @if (_selectedFiles.Count > 0)
                 {
@@ -193,6 +189,9 @@
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    MudFileUpload<IBrowserFile>?               _zipUpload;
+    MudFileUpload<IReadOnlyList<IBrowserFile>>? _filesUpload;
 
     // ZIP
     IBrowserFile? _selectedZip;

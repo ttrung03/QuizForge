@@ -13,8 +13,7 @@
                 <MudTextField @bind-Value="_noiDung"
                               Label="Nội dung câu hỏi"
                               Variant="Variant.Outlined"
-                              Lines="4"
-                              AutoGrow="true" />
+                              Lines="4" />
             </MudItem>
             <MudItem xs="12" sm="4">
                 <MudSelect T="short" @bind-Value="_capDo" Label="Cấp độ" Variant="Variant.Outlined">
@@ -131,17 +130,15 @@
                         @if (_addTab == 1)
                         {
                             <div class="d-flex align-center gap-2 flex-wrap">
-                                <MudFileUpload T="IBrowserFile"
+                                <MudFileUpload T="IBrowserFile" @ref="_imageUpload"
                                                Accept=".jpg,.jpeg,.png,.gif,.webp,.bmp"
-                                               FilesChanged="@(f => _addNewFile = f)">
-                                    <ActivatorContent>
-                                        <MudButton Variant="Variant.Outlined"
-                                                   StartIcon="@Icons.Material.Filled.Image"
-                                                   Color="Color.Success" Size="Size.Small">
-                                            @(_addNewFile is null ? "Chọn file hình ảnh" : _addNewFile.Name)
-                                        </MudButton>
-                                    </ActivatorContent>
-                                </MudFileUpload>
+                                               FilesChanged="@(f => _addNewFile = f)" />
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.Image"
+                                           Color="Color.Success" Size="Size.Small"
+                                           OnClick="@(() => _imageUpload!.OpenFilePickerAsync())">
+                                    @(_addNewFile is null ? "Chọn file hình ảnh" : _addNewFile.Name)
+                                </MudButton>
 
                                 @if (_addNewFile is not null)
                                 {
@@ -231,17 +228,15 @@
                         @if (_addAudioTab == 1)
                         {
                             <div class="d-flex align-center gap-2 flex-wrap">
-                                <MudFileUpload T="IBrowserFile"
+                                <MudFileUpload T="IBrowserFile" @ref="_audioUpload"
                                                Accept=".mp3,.wav,.ogg,.m4a,.aac"
-                                               FilesChanged="@(f => _addNewAudio = f)">
-                                    <ActivatorContent>
-                                        <MudButton Variant="Variant.Outlined"
-                                                   StartIcon="@Icons.Material.Filled.AudioFile"
-                                                   Color="Color.Warning" Size="Size.Small">
-                                            @(_addNewAudio is null ? "Chọn file audio" : _addNewAudio.Name)
-                                        </MudButton>
-                                    </ActivatorContent>
-                                </MudFileUpload>
+                                               FilesChanged="@(f => _addNewAudio = f)" />
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.AudioFile"
+                                           Color="Color.Warning" Size="Size.Small"
+                                           OnClick="@(() => _audioUpload!.OpenFilePickerAsync())">
+                                    @(_addNewAudio is null ? "Chọn file audio" : _addNewAudio.Name)
+                                </MudButton>
 
                                 @if (_addNewAudio is not null)
                                 {
@@ -274,8 +269,7 @@
                         {
                             var letter = "ABCD"[a.ThuTu - 1].ToString();
                             <div class="d-flex align-center gap-2 mb-2">
-                                <MudRadio Value="@a.MaCauTraLoi" Color="Color.Success"
-                                          Title="Đánh dấu là đáp án đúng" />
+                                <MudRadio Value="@a.MaCauTraLoi" Color="Color.Success" />
                                 <MudTextField @bind-Value="a.NoiDung"
                                               Variant="Variant.Outlined"
                                               Margin="Margin.Dense"
@@ -300,6 +294,9 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public CauHoiDto CauHoi { get; set; } = null!;
+
+    MudFileUpload<IBrowserFile>? _imageUpload;
+    MudFileUpload<IBrowserFile>? _audioUpload;
 
     string _noiDung = "";
     short _capDo = 1;
