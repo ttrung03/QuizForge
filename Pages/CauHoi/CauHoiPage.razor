@@ -11,39 +11,60 @@
 
 <PageTitle>Quản lý Câu hỏi</PageTitle>
 
-@* ── Header ── *@
-<div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-2">
-    <div class="d-flex align-center gap-2">
-        <MudIcon Icon="@Icons.Material.Filled.Quiz" Color="Color.Primary" Size="Size.Large" />
-        <div>
-            <MudText Typo="Typo.h5" Style="font-weight:700;line-height:1.2">Ngân hàng Câu hỏi</MudText>
-            <MudText Typo="Typo.caption" Class="mud-text-secondary">Duyệt, import và quản lý câu hỏi trắc nghiệm</MudText>
+@* ── Hero Header ── *@
+<div class="dethi-hero mb-5" style="animation: fadeInUp 300ms both">
+    <div class="d-flex align-center gap-3 flex-wrap" style="position:relative;z-index:1">
+        <div class="dethi-hero__icon">
+            <MudIcon Icon="@Icons.Material.Filled.Quiz" Style="font-size:2rem; color:#fff" />
         </div>
-    </div>
-    <div class="d-flex gap-2">
-        <MudButton Variant="Variant.Outlined"
-                   Color="Color.Secondary"
-                   StartIcon="@Icons.Material.Filled.PermMedia"
-                   OnClick="OpenMediaDialog"
-                   Size="Size.Small">
-            Media
-        </MudButton>
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Upload"
-                   Disabled="@(_maPhan == Guid.Empty)"
-                   OnClick="OpenImportDialog"
-                   Size="Size.Small">
-            Import câu hỏi
-        </MudButton>
+        <div class="flex-grow-1">
+            <MudText Typo="Typo.h5" Style="font-weight:700; color:#fff; margin:0; line-height:1.2">Ngân hàng Câu hỏi</MudText>
+            <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,.75); margin:2px 0 0">
+                Duyệt, import và quản lý câu hỏi trắc nghiệm
+            </MudText>
+        </div>
+        @if (_questions.Count > 0)
+        {
+            <div class="d-flex gap-3">
+                <div class="dethi-hero__stat">
+                    <span class="dethi-hero__stat-val">@_questions.Count(q => !q.LaCauNhom)</span>
+                    <span class="dethi-hero__stat-lbl">Câu đơn</span>
+                </div>
+                <div class="dethi-hero__stat">
+                    <span class="dethi-hero__stat-val">@_questions.Count(q => q.LaCauNhom)</span>
+                    <span class="dethi-hero__stat-lbl">Nhóm</span>
+                </div>
+            </div>
+        }
+        <div class="d-flex gap-2 ml-auto" @onclick:stopPropagation>
+            <MudButton Variant="Variant.Text"
+                       Style="color:rgba(255,255,255,.9); border:1px solid rgba(255,255,255,.3); border-radius:var(--radius-md)"
+                       StartIcon="@Icons.Material.Filled.PermMedia"
+                       OnClick="OpenMediaDialog"
+                       Size="Size.Small">
+                Media
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Style="background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:var(--radius-md)"
+                       StartIcon="@Icons.Material.Filled.Upload"
+                       Disabled="@(_maPhan == Guid.Empty)"
+                       OnClick="OpenImportDialog"
+                       Size="Size.Small">
+                Import câu hỏi
+            </MudButton>
+        </div>
     </div>
 </div>
 
 @* ── Filter panel ── *@
-<MudPaper Elevation="1" Class="pa-4 mb-4 rounded-lg">
-    <MudText Typo="Typo.subtitle2" Class="mb-3 mud-text-secondary" Style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem">
+<MudPaper Elevation="0" Class="mb-4"
+          Style="border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+                 padding:1.25rem 1.5rem; background:var(--surface-elevated);
+                 animation: fadeInUp 350ms 100ms both">
+    <div class="filter-panel__title">
+        <MudIcon Icon="@Icons.Material.Outlined.FilterList" Style="font-size:15px" />
         Bộ lọc
-    </MudText>
+    </div>
     <MudGrid Spacing="2">
         <MudItem xs="12" sm="5">
             <MudSelect T="Guid"
@@ -113,14 +134,14 @@
 @* ── Content ── *@
 @if (_maPhan == Guid.Empty)
 {
-    <MudPaper Elevation="0" Class="d-flex flex-column align-center justify-center pa-10 rounded-lg"
-              Style="border:2px dashed var(--mud-palette-divider);background:transparent">
-        <MudIcon Icon="@Icons.Material.Outlined.FilterList" Size="Size.Large" Color="Color.Default" Style="opacity:.4" />
-        <MudText Typo="Typo.h6" Class="mt-3" Style="opacity:.6">Chọn Môn học và Phần</MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">
+    <div class="empty-state" style="border:2px dashed var(--border-subtle); border-radius:var(--radius-lg); background:transparent">
+        <MudIcon Icon="@Icons.Material.Outlined.FilterList" Size="Size.Large" Color="Color.Default"
+                 Class="empty-state__icon" />
+        <MudText Typo="Typo.h6" Class="empty-state__title">Chọn Môn học và Phần</MudText>
+        <MudText Typo="Typo.body2" Class="empty-state__desc">
             Dùng bộ lọc phía trên để chọn môn học và phần cần xem.
         </MudText>
-    </MudPaper>
+    </div>
 }
 else if (_loading)
 {
@@ -129,26 +150,28 @@ else if (_loading)
 }
 else if (FilteredSingles.Count == 0 && FilteredGroups.Count == 0)
 {
-    <MudPaper Elevation="0" Class="d-flex flex-column align-center justify-center pa-10 rounded-lg"
-              Style="border:2px dashed var(--mud-palette-divider);background:transparent">
-        <MudIcon Icon="@Icons.Material.Outlined.Quiz" Size="Size.Large" Color="Color.Default" Style="opacity:.4" />
-        <MudText Typo="Typo.h6" Class="mt-3" Style="opacity:.6">
+    <div class="empty-state" style="border:2px dashed var(--border-subtle); border-radius:var(--radius-lg); background:transparent">
+        <MudIcon Icon="@Icons.Material.Outlined.Quiz" Size="Size.Large" Color="Color.Default"
+                 Class="empty-state__icon" />
+        <MudText Typo="Typo.h6" Class="empty-state__title">
             @(_questions.Count == 0 ? "Chưa có câu hỏi nào" : "Không tìm thấy kết quả")
         </MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">
+        <MudText Typo="Typo.body2" Class="empty-state__desc">
             @(_questions.Count == 0
                 ? "Import câu hỏi từ file Word hoặc Excel để bắt đầu."
                 : "Thử thay đổi từ khóa hoặc bộ lọc độ khó.")
         </MudText>
         @if (_questions.Count == 0)
         {
-            <MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary"
+            <MudButton Class="mt-5" Variant="Variant.Filled" Color="Color.Primary"
+                       Size="Size.Medium"
                        StartIcon="@Icons.Material.Filled.Upload"
+                       Style="border-radius:var(--radius-md)"
                        OnClick="OpenImportDialog">
                 Import ngay
             </MudButton>
         }
-    </MudPaper>
+    </div>
 }
 else
 {
@@ -180,9 +203,10 @@ else
     @* ── Câu hỏi đơn ── *@
     @if (FilteredSingles.Count > 0)
     {
-        <div class="d-flex align-center gap-2 mb-2">
-            <MudText Typo="Typo.subtitle1" Style="font-weight:600">Câu hỏi đơn</MudText>
-            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">@FilteredSingles.Count</MudChip>
+        <div class="section-label mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Style="color:var(--primary); font-size:20px" />
+            <span class="section-label__text">Câu hỏi đơn</span>
+            <span class="section-label__badge">@FilteredSingles.Count câu</span>
         </div>
 
         <MudDataGrid Items="FilteredSingles" Hover="true" Dense="true" SortMode="SortMode.None"
@@ -239,9 +263,12 @@ else
     @* ── Câu hỏi nhóm ── *@
     @if (FilteredGroups.Count > 0)
     {
-        <div class="d-flex align-center gap-2 mb-2">
-            <MudText Typo="Typo.subtitle1" Style="font-weight:600">Câu hỏi nhóm</MudText>
-            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">@FilteredGroups.Count nhóm</MudChip>
+        <div class="section-label mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Style="color:#0891B2; font-size:20px" />
+            <span class="section-label__text">Câu hỏi nhóm</span>
+            <span class="section-label__badge" style="background:rgba(8,145,178,.1); color:#0E7490">
+                @FilteredGroups.Count nhóm
+            </span>
         </div>
 
         <MudExpansionPanels MultiExpansion="true" Class="mb-4 rounded-lg" Elevation="2">

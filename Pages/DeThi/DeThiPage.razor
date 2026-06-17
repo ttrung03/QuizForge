@@ -11,20 +11,20 @@
 <PageTitle>Quản lý Đề thi</PageTitle>
 
 @* ── Hero Header ── *@
-<div class="dethi-hero mb-5">
-    <div class="d-flex align-center gap-3">
+<div class="dethi-hero mb-5" style="animation: fadeInUp 300ms both">
+    <div class="d-flex align-center gap-3" style="position:relative;z-index:1">
         <div class="dethi-hero__icon">
             <MudIcon Icon="@Icons.Material.Filled.Assignment" Style="font-size:2rem; color:#fff" />
         </div>
-        <div>
-            <MudText Typo="Typo.h5" Style="font-weight:700; color:#fff; margin:0">Quản lý Đề thi</MudText>
-            <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,0.8); margin:0">
+        <div class="flex-grow-1">
+            <MudText Typo="Typo.h5" Style="font-weight:700; color:#fff; margin:0; line-height:1.2">Quản lý Đề thi</MudText>
+            <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,.75); margin:2px 0 0">
                 Tạo, quản lý và phê duyệt đề thi theo môn học
             </MudText>
         </div>
         @if (_deThiList.Count > 0)
         {
-            <div class="ml-auto d-flex gap-3">
+            <div class="d-flex gap-3">
                 <div class="dethi-hero__stat">
                     <span class="dethi-hero__stat-val">@_deThiList.Count</span>
                     <span class="dethi-hero__stat-lbl">Tổng đề</span>
@@ -43,7 +43,10 @@
 </div>
 
 @* ── Filter + Action ── *@
-<MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius:12px">
+<MudPaper Elevation="0" Class="mb-4"
+          Style="border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+                 padding:1.25rem 1.5rem; background:var(--surface-elevated);
+                 animation: fadeInUp 350ms 100ms both">
     <div class="d-flex gap-3 align-stretch flex-wrap">
         <div style="flex:1; min-width:220px">
             <MudSelect T="Guid"
@@ -68,21 +71,23 @@
                        Disabled="@(_maMonHoc == Guid.Empty)"
                        OnClick="OpenCreateDialog"
                        FullWidth="true"
-                       Style="border-radius:8px; font-weight:600; text-transform:none; letter-spacing:0; height:56px; font-size:15px">
+                       Style="border-radius:var(--radius-md); font-weight:600; height:56px; font-size:15px">
                 Tạo đề thi mới
             </MudButton>
         </div>
     </div>
 </MudPaper>
-
-
 @* ── Content ── *@
 @if (_maMonHoc == Guid.Empty)
 {
-    <div class="dethi-empty">
-        <MudIcon Icon="@Icons.Material.Filled.LibraryBooks" Style="font-size:3.5rem; color:#cbd5e1; margin-bottom:12px" />
-        <MudText Typo="Typo.h6" Style="color:#64748b; font-weight:600">Chưa chọn môn học</MudText>
-        <MudText Typo="Typo.body2" Style="color:#94a3b8">Vui lòng chọn môn học ở trên để xem danh sách đề thi</MudText>
+    <div class="dethi-empty" style="animation: fadeIn 300ms both">
+        <MudIcon Icon="@Icons.Material.Filled.LibraryBooks"
+                 Class="empty-state__icon"
+                 Size="Size.Large" Color="Color.Default" />
+        <MudText Typo="Typo.h6" Class="empty-state__title">Chưa chọn môn học</MudText>
+        <MudText Typo="Typo.body2" Class="empty-state__desc">
+            Vui lòng chọn môn học ở trên để xem danh sách đề thi
+        </MudText>
     </div>
 }
 else if (_loading)
@@ -94,10 +99,14 @@ else if (_loading)
 }
 else if (_deThiList.Count == 0)
 {
-    <div class="dethi-empty">
-        <MudIcon Icon="@Icons.Material.Filled.PostAdd" Style="font-size:3.5rem; color:#cbd5e1; margin-bottom:12px" />
-        <MudText Typo="Typo.h6" Style="color:#64748b; font-weight:600">Chưa có đề thi nào</MudText>
-        <MudText Typo="Typo.body2" Style="color:#94a3b8">Nhấn <b>Tạo đề thi mới</b> để bắt đầu</MudText>
+    <div class="dethi-empty" style="animation: fadeIn 300ms both">
+        <MudIcon Icon="@Icons.Material.Filled.PostAdd"
+                 Class="empty-state__icon"
+                 Size="Size.Large" Color="Color.Default" />
+        <MudText Typo="Typo.h6" Class="empty-state__title">Chưa có đề thi nào</MudText>
+        <MudText Typo="Typo.body2" Class="empty-state__desc">
+            Nhấn <b>Tạo đề thi mới</b> để bắt đầu
+        </MudText>
     </div>
 }
 else
@@ -105,9 +114,12 @@ else
     <div class="dethi-list">
         @foreach (var dt in _deThiList)
         {
-            <MudPaper Elevation="0" Class="dethi-card mb-3" Style="border-radius:12px; border:1px solid #e2e8f0; overflow:hidden">
+            <MudPaper Elevation="0" Class="dethi-card mb-3"
+                      Style="border:1px solid var(--border-subtle); overflow:hidden">
+                @* Top accent bar *@
+                <div class="@(dt.DaDuyet == true ? "dethi-card__accent-bar dethi-card__accent-bar--approved" : "dethi-card__accent-bar dethi-card__accent-bar--pending")"></div>
                 @* Card Header *@
-                <div class="dethi-card__header" style="@(dt.DaDuyet == true ? "border-left:4px solid #22c55e" : "border-left:4px solid #f59e0b")">
+                <div class="dethi-card__header">
                     <div class="d-flex align-center flex-wrap gap-2" style="width:100%">
                         <MudIcon Icon="@Icons.Material.Filled.Description"
                                  Size="Size.Medium"
@@ -156,7 +168,7 @@ else
                         </div>
 
                         @* Action buttons *@
-                        <span @onclick:stopPropagation="true" class="d-flex gap-1 ml-2">
+                        <span @onclick:stopPropagation="true" class="dethi-actions">
                             <MudTooltip Text="Xem trước đề thi" Arrow="true">
                                 <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                                Size="Size.Small" Color="Color.Info"

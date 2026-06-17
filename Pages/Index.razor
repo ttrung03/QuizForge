@@ -8,23 +8,46 @@
 @inject MonHocService MonHocService
 @inject QuestionBankDbContext Db
 
-<PageTitle>Ngân Hàng Câu Hỏi Trắc Nghiệm</PageTitle>
+<PageTitle>QuizForge — Ngân Hàng Câu Hỏi Trắc Nghiệm</PageTitle>
 
 @* ── Hero header ── *@
-<div class="hero-banner mb-5">
-    <MudText Typo="Typo.h4" Style="font-weight:700;color:#fff">
-        Ngân Hàng Câu Hỏi Trắc Nghiệm
-    </MudText>
-    <MudText Typo="Typo.body1" Style="color:rgba(255,255,255,.8);margin-top:4px">
-        Quản lý toàn bộ câu hỏi, đề thi và danh mục học phần tập trung tại một nơi.
-    </MudText>
+<div class="hero-banner mb-5" style="animation: fadeInUp 300ms both">
+    <div class="d-flex align-center justify-space-between flex-wrap gap-3" style="position:relative;z-index:1">
+        <div>
+            <MudText Typo="Typo.overline"
+                     Style="color:rgba(255,255,255,.6); letter-spacing:.15em; font-size:.65rem; font-weight:600">
+                QUIZFORGE
+            </MudText>
+            <MudText Typo="Typo.h4" Style="font-weight:700; color:#fff; line-height:1.2; margin-top:4px">
+                Ngân Hàng Câu Hỏi
+            </MudText>
+            <MudText Typo="Typo.body1" Style="color:rgba(255,255,255,.75); margin-top:6px; max-width:480px; line-height:1.6">
+                Quản lý toàn bộ câu hỏi, đề thi và danh mục học phần tập trung tại một nơi.
+            </MudText>
+        </div>
+        @if (_totalCauHoi > 0 || _totalDeThi > 0)
+        {
+            <div class="d-flex gap-3 flex-wrap">
+                <div class="page-hero__stat">
+                    <span class="page-hero__stat-val">@_totalCauHoi</span>
+                    <span class="page-hero__stat-lbl">Câu hỏi</span>
+                </div>
+                <div class="page-hero__stat">
+                    <span class="page-hero__stat-val">@_totalDeThi</span>
+                    <span class="page-hero__stat-lbl">Đề thi</span>
+                </div>
+            </div>
+        }
+    </div>
 </div>
 
 @* ── Stat cards ── *@
 <MudGrid Spacing="3" Class="mb-5">
     <MudItem xs="6" sm="6" md="3">
-        <div class="stat-card stat-card--blue">
-            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" /></div>
+        <div class="stat-card stat-card--blue" style="animation-delay:0ms">
+            <div class="stat-card__icon">
+                <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" />
+            </div>
             <div class="stat-card__body">
                 <div class="stat-card__value">@_totalKhoa</div>
                 <div class="stat-card__label">Khoa</div>
@@ -32,8 +55,10 @@
         </div>
     </MudItem>
     <MudItem xs="6" sm="6" md="3">
-        <div class="stat-card stat-card--purple">
-            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.Book" Size="Size.Large" /></div>
+        <div class="stat-card stat-card--purple" style="animation-delay:60ms">
+            <div class="stat-card__icon">
+                <MudIcon Icon="@Icons.Material.Filled.Book" Size="Size.Large" />
+            </div>
             <div class="stat-card__body">
                 <div class="stat-card__value">@_totalMonHoc</div>
                 <div class="stat-card__label">Môn học</div>
@@ -41,8 +66,10 @@
         </div>
     </MudItem>
     <MudItem xs="6" sm="6" md="3">
-        <div class="stat-card stat-card--teal">
-            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.Quiz" Size="Size.Large" /></div>
+        <div class="stat-card stat-card--teal" style="animation-delay:120ms">
+            <div class="stat-card__icon">
+                <MudIcon Icon="@Icons.Material.Filled.Quiz" Size="Size.Large" />
+            </div>
             <div class="stat-card__body">
                 <div class="stat-card__value">@_totalCauHoi</div>
                 <div class="stat-card__label">Câu hỏi</div>
@@ -50,8 +77,10 @@
         </div>
     </MudItem>
     <MudItem xs="6" sm="6" md="3">
-        <div class="stat-card stat-card--orange">
-            <div class="stat-card__icon"><MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" /></div>
+        <div class="stat-card stat-card--orange" style="animation-delay:180ms">
+            <div class="stat-card__icon">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" />
+            </div>
             <div class="stat-card__body">
                 <div class="stat-card__value">@_totalDeThi</div>
                 <div class="stat-card__label">Đề thi</div>
@@ -63,18 +92,45 @@
 @* ── Difficulty breakdown ── *@
 @if (_totalCauHoi > 0)
 {
-    <MudPaper Elevation="2" Class="pa-4 mb-5 rounded-lg">
-        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
-            <MudIcon Icon="@Icons.Material.Filled.BarChart" Class="mr-2" Style="vertical-align:middle" />
-            Phân bố câu hỏi theo độ khó
-        </MudText>
-        <div class="diff-bar mb-2">
+    <MudPaper Elevation="1" Class="pa-5 mb-5"
+              Style="border-radius:var(--radius-lg); border:1px solid var(--border-subtle); animation: fadeInUp 400ms 200ms both">
+        <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-2">
+            <div class="d-flex align-center gap-2">
+                <div style="width:36px; height:36px; background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
+                            border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center">
+                    <MudIcon Icon="@Icons.Material.Filled.BarChart" Style="color:#2563EB; font-size:20px" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:700; line-height:1.2">
+                        Phân bố độ khó
+                    </MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Tổng @_totalCauHoi câu hỏi
+                    </MudText>
+                </div>
+            </div>
+            <div class="d-flex gap-3">
+                <div class="d-flex align-center gap-1">
+                    <div style="width:10px; height:10px; border-radius:3px; background:linear-gradient(135deg,#16a34a,#22c55e)"></div>
+                    <MudText Typo="Typo.caption" Style="font-weight:500">Dễ: <b>@_deCount</b></MudText>
+                </div>
+                <div class="d-flex align-center gap-1">
+                    <div style="width:10px; height:10px; border-radius:3px; background:linear-gradient(135deg,#d97706,#f59e0b)"></div>
+                    <MudText Typo="Typo.caption" Style="font-weight:500">TB: <b>@_tbCount</b></MudText>
+                </div>
+                <div class="d-flex align-center gap-1">
+                    <div style="width:10px; height:10px; border-radius:3px; background:linear-gradient(135deg,#dc2626,#ef4444)"></div>
+                    <MudText Typo="Typo.caption" Style="font-weight:500">Khó: <b>@_khoCount</b></MudText>
+                </div>
+            </div>
+        </div>
+        <div class="diff-bar mb-1">
             @if (_deCount > 0)
             {
                 <div class="diff-bar__segment diff-bar__segment--easy"
                      style="width:@((_deCount * 100.0 / _totalCauHoi).ToString("F0"))%"
                      title="Dễ: @_deCount câu">
-                    @if (_deCount * 100 / _totalCauHoi >= 10)
+                    @if (_deCount * 100 / _totalCauHoi >= 8)
                     { <span>Dễ (@_deCount)</span> }
                 </div>
             }
@@ -83,8 +139,8 @@
                 <div class="diff-bar__segment diff-bar__segment--medium"
                      style="width:@((_tbCount * 100.0 / _totalCauHoi).ToString("F0"))%"
                      title="Trung bình: @_tbCount câu">
-                    @if (_tbCount * 100 / _totalCauHoi >= 10)
-                    { <span>Trung bình (@_tbCount)</span> }
+                    @if (_tbCount * 100 / _totalCauHoi >= 8)
+                    { <span>TB (@_tbCount)</span> }
                 </div>
             }
             @if (_khoCount > 0)
@@ -92,79 +148,84 @@
                 <div class="diff-bar__segment diff-bar__segment--hard"
                      style="width:@((_khoCount * 100.0 / _totalCauHoi).ToString("F0"))%"
                      title="Khó: @_khoCount câu">
-                    @if (_khoCount * 100 / _totalCauHoi >= 10)
+                    @if (_khoCount * 100 / _totalCauHoi >= 8)
                     { <span>Khó (@_khoCount)</span> }
                 </div>
             }
-        </div>
-        <div class="d-flex gap-4 mt-2">
-            <div class="d-flex align-center gap-1">
-                <div style="width:12px;height:12px;border-radius:3px;background:#22c55e"></div>
-                <MudText Typo="Typo.caption">Dễ: @_deCount</MudText>
-            </div>
-            <div class="d-flex align-center gap-1">
-                <div style="width:12px;height:12px;border-radius:3px;background:#f59e0b"></div>
-                <MudText Typo="Typo.caption">Trung bình: @_tbCount</MudText>
-            </div>
-            <div class="d-flex align-center gap-1">
-                <div style="width:12px;height:12px;border-radius:3px;background:#ef4444"></div>
-                <MudText Typo="Typo.caption">Khó: @_khoCount</MudText>
-            </div>
         </div>
     </MudPaper>
 }
 
 @* ── Quick access cards ── *@
-<MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">Truy cập nhanh</MudText>
-<MudGrid Spacing="3">
+<div class="d-flex align-center gap-2 mb-3" style="animation: fadeInUp 400ms 250ms both">
+    <MudText Typo="Typo.subtitle1" Style="font-weight:700">Truy cập nhanh</MudText>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">— Điều hướng tới các tính năng chính</MudText>
+</div>
+<MudGrid Spacing="3" Style="animation: fadeInUp 400ms 300ms both">
     <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/danhmuc/khoa")'>
-            <MudCardContent Class="d-flex align-center gap-3">
+        <MudCard Elevation="1" Class="quick-card" @onclick='() => Nav.NavigateTo("/danhmuc/khoa-monhoc")'>
+            <MudCardContent Class="d-flex align-center gap-3 pa-4">
                 <div class="quick-card__icon" style="background:#EFF6FF">
                     <MudIcon Icon="@Icons.Material.Filled.School" Style="color:#2563EB" Size="Size.Medium" />
                 </div>
                 <div>
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Quản lý Khoa</MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Thêm, sửa, xóa khoa</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color:var(--text-primary)">
+                        Quản lý Khoa
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:var(--text-muted)">
+                        Thêm, sửa, xóa khoa
+                    </MudText>
                 </div>
             </MudCardContent>
         </MudCard>
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/danhmuc/monhoc")'>
-            <MudCardContent Class="d-flex align-center gap-3">
+        <MudCard Elevation="1" Class="quick-card" @onclick='() => Nav.NavigateTo("/danhmuc/monhoc")'>
+            <MudCardContent Class="d-flex align-center gap-3 pa-4">
                 <div class="quick-card__icon" style="background:#F5F3FF">
                     <MudIcon Icon="@Icons.Material.Filled.Book" Style="color:#7C3AED" Size="Size.Medium" />
                 </div>
                 <div>
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Quản lý Môn học</MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Thêm, sửa, xóa môn</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color:var(--text-primary)">
+                        Quản lý Môn học
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:var(--text-muted)">
+                        Thêm, sửa, xóa môn
+                    </MudText>
                 </div>
             </MudCardContent>
         </MudCard>
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/cauhoi")'>
-            <MudCardContent Class="d-flex align-center gap-3">
+        <MudCard Elevation="1" Class="quick-card" @onclick='() => Nav.NavigateTo("/cauhoi")'>
+            <MudCardContent Class="d-flex align-center gap-3 pa-4">
                 <div class="quick-card__icon" style="background:#F0FDFA">
                     <MudIcon Icon="@Icons.Material.Filled.Quiz" Style="color:#0891B2" Size="Size.Medium" />
                 </div>
                 <div>
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Ngân hàng Câu hỏi</MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Duyệt &amp; import câu hỏi</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color:var(--text-primary)">
+                        Ngân hàng Câu hỏi
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:var(--text-muted)">
+                        Duyệt &amp; import câu hỏi
+                    </MudText>
                 </div>
             </MudCardContent>
         </MudCard>
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="2" Class="quick-card" @onclick='() => Nav.NavigateTo("/dethi")'>
-            <MudCardContent Class="d-flex align-center gap-3">
+        <MudCard Elevation="1" Class="quick-card" @onclick='() => Nav.NavigateTo("/dethi")'>
+            <MudCardContent Class="d-flex align-center gap-3 pa-4">
                 <div class="quick-card__icon" style="background:#FFF7ED">
                     <MudIcon Icon="@Icons.Material.Filled.Assignment" Style="color:#EA580C" Size="Size.Medium" />
                 </div>
                 <div>
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:600">Quản lý Đề thi</MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Tạo &amp; duyệt đề thi</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700; color:var(--text-primary)">
+                        Quản lý Đề thi
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:var(--text-muted)">
+                        Tạo &amp; duyệt đề thi
+                    </MudText>
                 </div>
             </MudCardContent>
         </MudCard>

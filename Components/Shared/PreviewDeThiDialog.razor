@@ -13,49 +13,67 @@
 
 <MudDialog Style="max-width:860px">
     <TitleContent>
-        <div class="d-flex align-center gap-2" style="width:100%">
-            <MudIcon Icon="@Icons.Material.Filled.Visibility" />
-            <MudText Typo="Typo.h6" Class="flex-grow-1">Xem trước đề thi</MudText>
-            <MudSwitch T="bool"
-                       @bind-Value="_showAnswers"
-                       Color="Color.Success"
-                       Label="Hiển thị đáp án"
-                       Class="mr-2" />
-            <MudTooltip Text="Hoán vị câu hỏi (xáo trộn thứ tự câu hỏi)">
+        <div style="background:linear-gradient(135deg,#1E40AF 0%,#2563EB 100%);
+                    margin:-16px -24px 0; padding:16px 20px;
+                    display:flex; align-items:center; gap:10px;
+                    border-radius:0;">
+            <div style="width:36px;height:36px;background:rgba(255,255,255,.18);border-radius:8px;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                        border:1px solid rgba(255,255,255,.25)">
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="color:#fff;font-size:18px" />
+            </div>
+            <div style="flex:1">
+                <MudText Typo="Typo.subtitle1" Style="color:#fff;font-weight:700;line-height:1.2">Xem trước đề thi</MudText>
+                <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.7);font-size:.7rem">@DeThi.TenDeThi</MudText>
+            </div>
+            <div class="d-flex align-center gap-1 flex-wrap">
                 <MudSwitch T="bool"
-                           Value="_shuffleQuestions"
-                           ValueChanged="OnShuffleQuestionsChanged"
-                           Color="Color.Secondary"
-                           Label="Hoán vị câu hỏi"
-                           Class="mr-2" />
-            </MudTooltip>
-            <MudTooltip Text="Hoán vị đáp án (xáo trộn thứ tự câu trả lời)">
-                <MudSwitch T="bool"
-                           Value="_shuffleAnswers"
-                           ValueChanged="OnShuffleAnswersChanged"
-                           Color="Color.Tertiary"
-                           Label="Hoán vị đáp án"
-                           Class="mr-2" />
-            </MudTooltip>
-            @if (DeThi.DaDuyet != true)
-            {
-                <MudTooltip Text="Phê duyệt và lưu thứ tự hoán vị hiện tại">
-                    <MudButton Variant="Variant.Filled" Color="Color.Success"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.CheckCircle"
-                               OnClick="DuyetAsync"
-                               Disabled="@_approving">
-                        @(_approving ? "Đang lưu…" : "Phê duyệt")
-                    </MudButton>
+                           @bind-Value="_showAnswers"
+                           Color="Color.Success"
+                           Label="Đáp án"
+                           Style="color:rgba(255,255,255,.9);font-size:.8rem"
+                           Class="mr-0" />
+                <MudTooltip Text="Hoán vị câu hỏi (xáo trộn thứ tự câu hỏi)">
+                    <MudSwitch T="bool"
+                               Value="_shuffleQuestions"
+                               ValueChanged="OnShuffleQuestionsChanged"
+                               Color="Color.Warning"
+                               Label="Hoán vị câu"
+                               Style="color:rgba(255,255,255,.9);font-size:.8rem"
+                               Class="mr-0" />
                 </MudTooltip>
-            }
-            else
-            {
-                <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                         Icon="@Icons.Material.Filled.CheckCircle">
-                    Đã duyệt
-                </MudChip>
-            }
+                <MudTooltip Text="Hoán vị đáp án (xáo trộn thứ tự câu trả lời)">
+                    <MudSwitch T="bool"
+                               Value="_shuffleAnswers"
+                               ValueChanged="OnShuffleAnswersChanged"
+                               Color="Color.Info"
+                               Label="Hoán vị đáp án"
+                               Style="color:rgba(255,255,255,.9);font-size:.8rem"
+                               Class="mr-0" />
+                </MudTooltip>
+                @if (DeThi.DaDuyet != true)
+                {
+                    <MudTooltip Text="Phê duyệt và lưu thứ tự hoán vị hiện tại">
+                        <MudButton Variant="Variant.Filled"
+                                   Style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                                   OnClick="DuyetAsync"
+                                   Disabled="@_approving">
+                            @(_approving ? "Đang lưu…" : "Phê duyệt")
+                        </MudButton>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudChip T="string"
+                             Style="background:rgba(34,197,94,.25);color:#86efac;border:1px solid rgba(34,197,94,.3);height:28px"
+                             Size="Size.Small"
+                             Icon="@Icons.Material.Filled.CheckCircle">
+                        Đã duyệt
+                    </MudChip>
+                }
+            </div>
         </div>
     </TitleContent>
 
@@ -589,15 +607,23 @@
     </DialogContent>
 
     <DialogActions>
-        <MudSwitch T="bool" @bind-Value="_includeAnswerKey"
-                   Color="Color.Info" Label="Kèm bảng đáp án" Class="mr-2" />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.FileDownload"
-                   Disabled="@_exporting"
-                   OnClick="ExportWordAsync">
-            @(_exporting ? "Đang xuất…" : "Xuất Word")
-        </MudButton>
-        <MudButton OnClick="@(() => MudDialog.Cancel())">Đóng</MudButton>
+        <div style="display:flex;align-items:center;gap:8px;width:100%;padding:4px 0">
+            <MudSwitch T="bool" @bind-Value="_includeAnswerKey"
+                       Color="Color.Info" Label="Kèm bảng đáp án" Class="mr-auto" />
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       OnClick="@(() => MudDialog.Cancel())"
+                       Style="border-radius:var(--radius-md)">
+                Đóng
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Style="background:linear-gradient(135deg,#1D4ED8,#2563EB);color:#fff;border-radius:var(--radius-md);font-weight:700;padding:8px 20px"
+                       StartIcon="@Icons.Material.Filled.FileDownload"
+                       Disabled="@_exporting"
+                       OnClick="ExportWordAsync">
+                @(_exporting ? "Đang xuất…" : "Xuất Word")
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
